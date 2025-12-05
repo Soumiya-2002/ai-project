@@ -1,0 +1,212 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a4d3c 0%, #1a7a5e 50%, #2d9f7f 100%);
+  padding: 2rem;
+  font-family: 'Inter', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  animation: float 20s infinite ease-in-out;
+}
+
+.login-container::after {
+  content: '';
+  position: absolute;
+  bottom: -50%;
+  left: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(45, 159, 127, 0.3) 0%, transparent 70%);
+  animation: float 15s infinite ease-in-out reverse;
+}
+
+.logo {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 2rem;
+  animation: fadeInDown 0.8s ease-out;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+}
+
+.login-container h2 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffffff 0%, #d4f4e7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 2.5rem;
+  animation: fadeInDown 0.8s ease-out 0.2s backwards;
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.login-container>div,
+.login-container>button {
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  z-index: 1;
+}
+
+.login-container>div {
+  animation: fadeInUp 0.8s ease-out 0.4s backwards;
+}
+
+.login-container>button {
+  animation: fadeInUp 0.8s ease-out 0.6s backwards;
+}
+
+/* Input Styles */
+.input-wrapper {
+  margin-bottom: 1.5rem;
+}
+
+.input-wrapper label {
+  display: block;
+  color: #ffffff;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 1rem 1.2rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(45, 159, 127, 0.3);
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  color: #0a4d3c;
+  font-weight: 500;
+}
+
+.input-wrapper input:focus {
+  outline: none;
+  border-color: #2d9f7f;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(45, 159, 127, 0.15), 0 10px 30px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.input-wrapper input::placeholder {
+  color: #7a9d8f;
+}
+
+/* Button Styles */
+.btn-primary {
+  width: 100%;
+  padding: 1.1rem 2rem;
+  background: linear-gradient(135deg, #2d9f7f 0%, #1a7a5e 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 25px rgba(45, 159, 127, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(45, 159, 127, 0.5);
+}
+
+.btn-primary:active {
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+
+  33% {
+    transform: translate(30px, -30px) rotate(120deg);
+  }
+
+  66% {
+    transform: translate(-20px, 20px) rotate(240deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .login-container h2 {
+    font-size: 2rem;
+  }
+
+  .logo {
+    width: 100px;
+    height: 100px;
+  }
+}

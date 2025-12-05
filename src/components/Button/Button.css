@@ -1,0 +1,58 @@
+.modern-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+
+  background: linear-gradient(135deg, #4f46e5, #6d28d9);
+
+  cursor: pointer;
+  transition: 0.25s ease-in-out;
+  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.25);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hover Effect */
+.modern-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(79, 70, 229, 0.35);
+  opacity: 0.95;
+}
+
+/* Active / Click effect */
+.modern-btn:active {
+  transform: scale(0.97);
+}
+
+/* Disabled */
+.modern-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Loader Spinner */
+.loader {
+  width: 18px;
+  height: 18px;
+  border: 3px solid rgba(255, 255, 255, 0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

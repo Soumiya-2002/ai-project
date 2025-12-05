@@ -1,0 +1,52 @@
+.modern-input-container {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.modern-input-container input {
+  width: 100%;
+  padding: 14px 12px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  background: transparent;
+  transition: 0.25s ease-in-out;
+  color: #111827;
+}
+
+/* Focus border + glow */
+.modern-input-container input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0px 0px 5px rgba(79, 70, 229, 0.3);
+}
+
+/* Floating Label */
+.modern-input-container label {
+  position: absolute;
+  left: 14px;
+  top: 15px;
+  color: #6b7280;
+  pointer-events: none;
+  background: white;
+  padding: 0 4px;
+  transition: 0.2s ease-in-out;
+  border-radius: 4px;
+}
+
+/* Move label upward on focus/value */
+.modern-input-container input:focus + label,
+.modern-input-container input:not(:placeholder-shown) + label {
+  top: -8px;
+  left: 10px;
+  font-size: 12px;
+  color: #4f46e5;
+}
+
+/* Mobile Touch Adjustments */
+@media (max-width: 480px) {
+  .modern-input-container input {
+    padding: 12px;
+  }
+}

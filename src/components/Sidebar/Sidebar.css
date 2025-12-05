@@ -1,0 +1,44 @@
+.sidebar {
+  width: 220px;
+  background: #1f1f1f;
+  color: white;
+  height: 100vh;
+  position: fixed;
+  transition: width 0.3s ease;
+  padding-top: 20px;
+}
+
+.sidebar.collapsed {
+  width: 70px;
+}
+
+.toggle-btn {
+  background: #444;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+.menu-list {
+  list-style: none;
+  padding: 20px 0;
+}
+
+.menu-list li {
+  padding: 12px 20px;
+}
+
+.menu-list li.active {
+  background: #333;
+}
+
+.menu-list li a {
+  color: white;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
