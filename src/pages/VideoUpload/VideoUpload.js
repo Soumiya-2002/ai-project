@@ -1,368 +1,269 @@
-import React, { useState, useEffect } from 'react';
-import './VideoUpload.css';
+import React, { useState } from 'react';
+import Navbar from '../../components/Navbar';
+import api from '../../api/axios';
 
 const VideoUpload = () => {
-    const [videos, setVideos] = useState([]);
+    const [schools, setSchools] = useState([]);
     const [teachers, setTeachers] = useState([]);
-    const [showModal, setShowModal] = useState(false);
-    const [filterStandard, setFilterStandard] = useState('All');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [formData, setFormData] = useState({
-        teacherId: '',
-        teacherName: '',
-        standard: 'Sr',
-        subject: '',
-        title: '',
-        description: '',
-        duration: '',
-        videoFile: null,
-        thumbnail: null,
-        uploadDate: ''
-    });
+    const [file, setFile] = useState(null);
+    const [message, setMessage] = useState('');
 
-    const standards = ['All', 'Sr', 'Jr', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+    // Form Selection State
+    const [selectedSchool, setSelectedSchool] = useState('');
+    const [selectedTeacher, setSelectedTeacher] = useState('');
+    const [selectedDate, setSelectedDate] = useState('');
+    const [lectureNumber, setLectureNumber] = useState(1);
 
-    useEffect(() => {
-        loadVideos();
-        loadTeachers();
-    }, []);
+    // New File States
+    const [cobParamsFile, setCobParamsFile] = useState(null);
+    const [readingMaterialFile, setReadingMaterialFile] = useState(null);
+    const [lessonPlanFile, setLessonPlanFile] = useState(null);
 
-    const loadVideos = () => {
-        const storedVideos = JSON.parse(localStorage.getItem('videos')) || [];
-        setVideos(storedVideos);
+    // User Role context
+    const session = JSON.parse(localStorage.getItem('user')) || {};
+    const isSuperAdmin = (session.role || '').toLowerCase().replace(/[\s_]/g, '') === 'superadmin';
+    const userSchoolId = session.school_id;
+
+    React.useEffect(() => {
+        if (isSuperAdmin) {
+            loadSchools();
+        } else if (userSchoolId) {
+            setSelectedSchool(userSchoolId);
+            loadTeachers(userSchoolId);
+        }
+    }, [isSuperAdmin, userSchoolId]);
+
+    const loadSchools = async () => {
+        try {
+            const { data } = await api.get('/schools');
+            setSchools(data.data || []);
+        } catch (err) {
+            console.error("Failed to load schools", err);
+        }
     };
 
-    const loadTeachers = () => {
-        const storedTeachers = JSON.parse(localStorage.getItem('teachers')) || [];
-        setTeachers(storedTeachers);
+    const loadTeachers = async (schoolId) => {
+        try {
+            const { data } = await api.get(`/teachers?school_id=${schoolId}&limit=100`);
+            setTeachers(data.data || []);
+        } catch (err) {
+            console.error("Failed to load teachers", err);
+        }
     };
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-
-        if (name === 'teacherId') {
-            const selectedTeacher = teachers.find(t => t.id.toString() === value);
-            if (selectedTeacher) {
-                setFormData(prev => ({
-                    ...prev,
-                    teacherId: value,
-                    teacherName: selectedTeacher.name,
-                    standard: selectedTeacher.standard,
-                    subject: selectedTeacher.subject
-                }));
-            }
+    const handleSchoolChange = (e) => {
+        const schoolId = e.target.value;
+        setSelectedSchool(schoolId);
+        setSelectedTeacher('');
+        if (schoolId) {
+            loadTeachers(schoolId);
         } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
+            setTeachers([]);
         }
     };
 
     const handleFileChange = (e) => {
-        const { name, files } = e.target;
-        if (files && files[0]) {
-            const file = files[0];
-            const reader = new FileReader();
-
-            reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, [name]: reader.result }));
-            };
-
-            reader.readAsDataURL(file);
-        }
+        setFile(e.target.files[0]);
     };
 
-    const handleSubmit = (e) => {
+    const handleUpload = async (e) => {
         e.preventDefault();
 
-        const newVideo = {
-            ...formData,
-            id: Date.now(),
-            uploadDate: new Date().toISOString().split('T')[0]
-        };
-
-        const updatedVideos = [...videos, newVideo];
-        setVideos(updatedVideos);
-        localStorage.setItem('videos', JSON.stringify(updatedVideos));
-
-        resetForm();
-    };
-
-    const handleDelete = (id) => {
-        if (window.confirm('Are you sure you want to delete this video?')) {
-            const updatedVideos = videos.filter(v => v.id !== id);
-            setVideos(updatedVideos);
-            localStorage.setItem('videos', JSON.stringify(updatedVideos));
-        }
-    };
-
-    const resetForm = () => {
-        setFormData({
-            teacherId: '',
-            teacherName: '',
-            standard: 'Sr',
-            subject: '',
-            title: '',
-            description: '',
-            duration: '',
-            videoFile: null,
-            thumbnail: null,
-            uploadDate: ''
-        });
-        setShowModal(false);
-    };
-
-    const getFilteredVideos = () => {
-        let filtered = videos;
-
-        if (searchTerm) {
-            filtered = filtered.filter(video =>
-                video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                video.teacherName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                video.subject.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+        if (!selectedSchool || !selectedTeacher || !selectedDate || !file) {
+            alert("Please complete all steps.");
+            return;
         }
 
-        if (filterStandard !== 'All') {
-            filtered = filtered.filter(video => video.standard === filterStandard);
+        const formData = new FormData();
+        formData.append('video', file);
+        formData.append('school_id', selectedSchool);
+        formData.append('teacher_id', selectedTeacher);
+        formData.append('date', selectedDate);
+        formData.append('lecture_number', lectureNumber);
+
+        // Append additional files if they exist
+        if (cobParamsFile) formData.append('cobParams', cobParamsFile);
+        if (readingMaterialFile) formData.append('readingMaterial', readingMaterialFile);
+        if (lessonPlanFile) formData.append('lessonPlan', lessonPlanFile);
+
+        try {
+            setMessage('Uploading Video...');
+            const res = await api.post('/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            setMessage('Upload Successful! AI Analysis Queued.');
+            setFile(null);
+            // Reset other fields if needed, or keep for next upload
+        } catch (err) {
+            console.error(err);
+            setMessage('Upload Failed: ' + (err.response?.data?.message || err.message));
         }
-
-        return filtered;
-    };
-
-    const getStandardBadge = (standard) => {
-        if (standard === 'Sr') return 'badge-senior';
-        if (standard === 'Jr') return 'badge-junior';
-        return 'badge-standard';
     };
 
     return (
-        <div className="video-upload-container">
-            <div className="video-upload-header">
-                <div className="header-content">
-                    <h1 className="page-title">Video Management</h1>
-                    <p className="page-subtitle">Upload and manage teacher videos</p>
-                </div>
-                <button className="btn-upload-video" onClick={() => setShowModal(true)}>
-                    <span className="btn-icon">📹</span>
-                    Upload Video
-                </button>
-            </div>
+        <div style={{ minHeight: '100vh', background: '#f0fdf4' }}>
+            {/* Note: Navbar import path adjusted to ../../components/Navbar */}
+            <div className="dashboard-container" style={{ padding: '2rem' }}>
+                <h2 className="page-title">Upload Lecture Video</h2>
+                <div className="card" style={{ maxWidth: '800px', margin: '2rem auto', padding: '2rem', borderRadius: '16px', background: 'white', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
 
-            <div className="filters-section">
-                <div className="search-box">
-                    <span className="search-icon">🔍</span>
-                    <input
-                        type="text"
-                        placeholder="Search by title, teacher, or subject..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
-                    />
-                </div>
+                    <form onSubmit={handleUpload}>
 
-                <div className="filter-tabs">
-                    {standards.map(standard => (
-                        <button
-                            key={standard}
-                            className={`filter-tab ${filterStandard === standard ? 'active' : ''}`}
-                            onClick={() => setFilterStandard(standard)}
-                        >
-                            {standard === 'All' ? 'All Standards' : `Standard ${standard}`}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="videos-grid">
-                {getFilteredVideos().length > 0 ? (
-                    getFilteredVideos().map((video) => (
-                        <div key={video.id} className="video-card">
-                            <div className="video-thumbnail">
-                                {video.thumbnail ? (
-                                    <img src={video.thumbnail} alt={video.title} />
-                                ) : (
-                                    <div className="thumbnail-placeholder">
-                                        <span className="placeholder-icon">🎬</span>
-                                    </div>
-                                )}
-                                <div className="video-duration">{video.duration}</div>
-                            </div>
-
-                            <div className="video-content">
-                                <h3 className="video-title">{video.title}</h3>
-                                <p className="video-description">{video.description}</p>
-
-                                <div className="video-meta">
-                                    <div className="meta-item">
-                                        <span className="meta-icon">👨‍🏫</span>
-                                        <span className="meta-text">{video.teacherName}</span>
-                                    </div>
-                                    <div className="meta-item">
-                                        <span className="meta-icon">📚</span>
-                                        <span className="meta-text">{video.subject}</span>
-                                    </div>
-                                    <div className="meta-item">
-                                        <span className={`badge ${getStandardBadge(video.standard)}`}>
-                                            {video.standard}
-                                        </span>
-                                    </div>
-                                    <div className="meta-item">
-                                        <span className="meta-icon">📅</span>
-                                        <span className="meta-text">{video.uploadDate}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="video-actions">
-                                <button className="btn-action btn-play" title="Play">
-                                    ▶️
-                                </button>
-                                <button
-                                    className="btn-action btn-delete"
-                                    onClick={() => handleDelete(video.id)}
-                                    title="Delete"
+                        {/* Step 1: School Selection */}
+                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Select School</label>
+                            {isSuperAdmin ? (
+                                <select
+                                    className="form-control"
+                                    value={selectedSchool}
+                                    onChange={handleSchoolChange}
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                                    required
                                 >
-                                    🗑️
-                                </button>
+                                    <option value="">-- Select School --</option>
+                                    {schools.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <input
+                                    type="text"
+                                    value={userSchoolId ? "My School (Locked)" : "No School Linked"}
+                                    disabled
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db', background: '#f3f4f6' }}
+                                />
+                            )}
+                        </div>
+
+                        {/* Step 2: Teacher Selection */}
+                        <div className="form-group" style={{ marginBottom: '1.5rem', opacity: selectedSchool ? 1 : 0.5 }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Select Teacher</label>
+                            <select
+                                className="form-control"
+                                value={selectedTeacher}
+                                onChange={(e) => setSelectedTeacher(e.target.value)}
+                                disabled={!selectedSchool}
+                                style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                                required
+                            >
+                                <option value="">-- Select Teacher --</option>
+                                {teachers.map(t => (
+                                    <option key={t.id} value={t.id}>
+                                        {t.name} ({Array.isArray(t.subjects) ? t.subjects.join(', ') : t.subjects || 'N/A'})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Step 3: Date & Lecture Number */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem', opacity: selectedTeacher ? 1 : 0.5 }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Lecture Date</label>
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    disabled={!selectedTeacher}
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Lecture Number</label>
+                                <select
+                                    value={lectureNumber}
+                                    onChange={(e) => setLectureNumber(e.target.value)}
+                                    disabled={!selectedTeacher}
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                                    required
+                                >
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                                        <option key={num} value={num}>Lecture {num}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
-                    ))
-                ) : (
-                    <div className="no-videos">
-                        <span className="no-videos-icon">🎥</span>
-                        <p>No videos found</p>
-                        <button className="btn-upload-first" onClick={() => setShowModal(true)}>
-                            Upload Your First Video
+
+                        {/* COB Parameters (DOCX) */}
+                        <div className="form-group" style={{ marginBottom: '1.5rem', opacity: selectedDate ? 1 : 0.5 }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>COB Parameters (.docx / .pdf)</label>
+                            <input
+                                type="file"
+                                accept=".docx, .pdf"
+                                onChange={(e) => setCobParamsFile(e.target.files[0])}
+                                disabled={!selectedDate}
+                                style={{ width: '100%', padding: '0.8rem', border: '1px dashed #d1d5db', borderRadius: '8px' }}
+                                required
+                            />
+                        </div>
+
+                        {/* Reading Material (PDF) */}
+                        <div className="form-group" style={{ marginBottom: '1.5rem', opacity: selectedDate ? 1 : 0.5 }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Reading Material / Eye to Mind (.pdf)</label>
+                            <input
+                                type="file"
+                                accept=".pdf"
+                                onChange={(e) => setReadingMaterialFile(e.target.files[0])}
+                                disabled={!selectedDate}
+                                style={{ width: '100%', padding: '0.8rem', border: '1px dashed #d1d5db', borderRadius: '8px' }}
+                                required
+                            />
+                        </div>
+
+                        {/* Open Sesame (PDF) */}
+                        <div className="form-group" style={{ marginBottom: '2rem', opacity: selectedDate ? 1 : 0.5 }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Open Sesame / Lesson Plan (.pdf)</label>
+                            <input
+                                type="file"
+                                accept=".pdf"
+                                onChange={(e) => setLessonPlanFile(e.target.files[0])}
+                                disabled={!selectedDate}
+                                style={{ width: '100%', padding: '0.8rem', border: '1px dashed #d1d5db', borderRadius: '8px' }}
+                                required
+                            />
+                        </div>
+
+                        {/* Step 4: Upload Video */}
+                        <div className="form-group" style={{ marginBottom: '2rem', opacity: selectedDate ? 1 : 0.5 }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Upload Video File</label>
+                            <input
+                                type="file"
+                                onChange={handleFileChange}
+                                accept="video/*"
+                                disabled={!selectedDate}
+                                style={{ width: '100%', padding: '0.8rem', border: '1px dashed #d1d5db', borderRadius: '8px' }}
+                                required
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={!file}
+                            style={{
+                                width: '100%',
+                                padding: '1rem',
+                                background: file ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : '#9ca3af',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontWeight: 'bold',
+                                cursor: file ? 'pointer' : 'not-allowed',
+                                fontSize: '1rem'
+                            }}
+                        >
+                            <i className="fa-solid fa-cloud-arrow-up" style={{ marginRight: '8px' }}></i>
+                            Upload & Analyze
                         </button>
-                    </div>
-                )}
-            </div>
-
-            {showModal && (
-                <div className="modal-overlay" onClick={resetForm}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2>Upload New Video</h2>
-                            <button className="modal-close" onClick={resetForm}>✕</button>
+                    </form>
+                    {message && (
+                        <div style={{ marginTop: '1.5rem', padding: '1rem', background: message.includes('Success') ? '#ecfdf5' : '#fef2f2', color: message.includes('Success') ? '#065f46' : '#991b1b', borderRadius: '8px', textAlign: 'center' }}>
+                            {message}
                         </div>
-
-                        <form onSubmit={handleSubmit} className="video-form">
-                            <div className="form-grid">
-                                <div className="form-group full-width">
-                                    <label>Select Teacher *</label>
-                                    <select
-                                        name="teacherId"
-                                        value={formData.teacherId}
-                                        onChange={handleInputChange}
-                                        required
-                                    >
-                                        <option value="">Choose a teacher...</option>
-                                        {teachers.map(teacher => (
-                                            <option key={teacher.id} value={teacher.id}>
-                                                {teacher.name} - {teacher.subject} (Standard {teacher.standard})
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Standard</label>
-                                    <input
-                                        type="text"
-                                        name="standard"
-                                        value={formData.standard}
-                                        readOnly
-                                        className="readonly-input"
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Subject</label>
-                                    <input
-                                        type="text"
-                                        name="subject"
-                                        value={formData.subject}
-                                        readOnly
-                                        className="readonly-input"
-                                    />
-                                </div>
-
-                                <div className="form-group full-width">
-                                    <label>Video Title *</label>
-                                    <input
-                                        type="text"
-                                        name="title"
-                                        value={formData.title}
-                                        onChange={handleInputChange}
-                                        required
-                                        placeholder="e.g., Introduction to Algebra"
-                                    />
-                                </div>
-
-                                <div className="form-group full-width">
-                                    <label>Description *</label>
-                                    <textarea
-                                        name="description"
-                                        value={formData.description}
-                                        onChange={handleInputChange}
-                                        required
-                                        placeholder="Brief description of the video content..."
-                                        rows="3"
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Duration *</label>
-                                    <input
-                                        type="text"
-                                        name="duration"
-                                        value={formData.duration}
-                                        onChange={handleInputChange}
-                                        required
-                                        placeholder="e.g., 15:30"
-                                    />
-                                </div>
-
-                                <div className="form-group">
-                                    <label>Video File *</label>
-                                    <input
-                                        type="file"
-                                        name="videoFile"
-                                        onChange={handleFileChange}
-                                        accept="video/*"
-                                        required
-                                        className="file-input"
-                                    />
-                                </div>
-
-                                <div className="form-group full-width">
-                                    <label>Thumbnail (Optional)</label>
-                                    <input
-                                        type="file"
-                                        name="thumbnail"
-                                        onChange={handleFileChange}
-                                        accept="image/*"
-                                        className="file-input"
-                                    />
-                                    {formData.thumbnail && (
-                                        <div className="thumbnail-preview">
-                                            <img src={formData.thumbnail} alt="Thumbnail preview" />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="form-actions">
-                                <button type="button" className="btn-cancel" onClick={resetForm}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="btn-submit">
-                                    Upload Video
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                    )}
                 </div>
-            )}
+            </div>
         </div>
     );
 };

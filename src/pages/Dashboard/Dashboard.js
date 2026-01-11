@@ -2,169 +2,148 @@ import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
-    totalTeachers: 0,
-    totalVideos: 0,
-    seniorTeachers: 0,
-    juniorTeachers: 0,
-    standardTeachers: 0,
-    avgScore: 0
-  });
+    const [session, setSession] = useState({ role: 'school_admin', user: { name: 'User' } });
+    const [realStats, setRealStats] = useState({ teachers: 0, videos: 0 });
 
-  useEffect(() => {
-    // Load stats from localStorage or API
-    const teachers = JSON.parse(localStorage.getItem('teachers')) || [];
-    const videos = JSON.parse(localStorage.getItem('videos')) || [];
-    
-    const seniorCount = teachers.filter(t => t.standard === 'Sr').length;
-    const juniorCount = teachers.filter(t => t.standard === 'Jr').length;
-    const standardCount = teachers.filter(t => !['Sr', 'Jr'].includes(t.standard)).length;
-    const totalScore = teachers.reduce((sum, t) => sum + (parseFloat(t.score) || 0), 0);
-    const avgScore = teachers.length > 0 ? (totalScore / teachers.length).toFixed(2) : 0;
+    useEffect(() => {
+        // Load session info
+        const sessionStr = localStorage.getItem('session');
+        if (sessionStr) {
+            const loadedSession = JSON.parse(sessionStr);
+            setSession(prev => ({
+                ...prev,
+                role: loadedSession.role || 'school_admin',
+                user: loadedSession.user || { name: 'User' }
+            }));
+        }
 
-    setStats({
-      totalTeachers: teachers.length,
-      totalVideos: videos.length,
-      seniorTeachers: seniorCount,
-      juniorTeachers: juniorCount,
-      standardTeachers: standardCount,
-      avgScore: avgScore
-    });
-  }, []);
+        // Load real counts from localStorage
+        const teachers = JSON.parse(localStorage.getItem('teachers')) || [];
+        // Mock videos if not strictly in LS yet, or try to load
+        // const videos = JSON.parse(localStorage.getItem('videos')) || []; 
+        // For now, let's just use teachers count as it's reliable from TeacherList
+        setRealStats({ teachers: teachers.length, videos: 12 }); // Keep videos mock or 0
+    }, []);
 
-  const statCards = [
-    {
-      title: 'Total Teachers',
-      value: stats.totalTeachers,
-      icon: '👨‍🏫',
-      color: 'primary',
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-    },
-    {
-      title: 'Total Videos',
-      value: stats.totalVideos,
-      icon: '🎥',
-      color: 'success',
-      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
-    },
-    {
-      title: 'Senior Teachers',
-      value: stats.seniorTeachers,
-      icon: '🎓',
-      color: 'info',
-      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
-    },
-    {
-      title: 'Junior Teachers',
-      value: stats.juniorTeachers,
-      icon: '📚',
-      color: 'warning',
-      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
-    },
-    {
-      title: 'Standard Teachers',
-      value: stats.standardTeachers,
-      icon: '📖',
-      color: 'secondary',
-      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
-    },
-    {
-      title: 'Average Score',
-      value: stats.avgScore,
-      icon: '⭐',
-      color: 'danger',
-      gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
-    }
-  ];
+    // Generate role-specific content
+    const getStats = () => {
+        if (session.role === 'teacher') {
+            return [
+                { title: 'My Videos', value: '12', icon: 'fa-solid fa-file-video', color: 'blue' },
+                { title: 'Avg Engagement', value: '85%', icon: 'fa-solid fa-chart-line', color: 'green' },
+                { title: 'Processing', value: '2', icon: 'fa-solid fa-spinner', color: 'orange' },
+                { title: 'Pending Review', value: '3', icon: 'fa-solid fa-clipboard-check', color: 'purple' }
+            ];
+        }
+        return [
+            { title: 'Total Schools', value: '1', icon: 'fa-solid fa-school', color: 'blue' },
+            { title: 'Active Teachers', value: realStats.teachers || '0', icon: 'fa-solid fa-chalkboard-user', color: 'green' },
+            { title: 'Videos Analyzed', value: '54', icon: 'fa-solid fa-play', color: 'orange' },
+            { title: 'Alerts', value: '5', icon: 'fa-solid fa-triangle-exclamation', color: 'red' }
+        ];
+    };
 
-  return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">Admin Dashboard</h1>
-        <p className="dashboard-subtitle">Welcome back! Here's your overview</p>
-      </div>
+    const stats = getStats();
 
-      <div className="stats-grid">
-        {statCards.map((card, index) => (
-          <div 
-            key={index} 
-            className="stat-card"
-            style={{ '--card-gradient': card.gradient }}
-          >
-            <div className="stat-card-inner">
-              <div className="stat-icon">{card.icon}</div>
-              <div className="stat-content">
-                <h3 className="stat-value">{card.value}</h3>
-                <p className="stat-title">{card.title}</p>
-              </div>
+    // Mock Recent Activity
+    const activities = [
+        { id: 1, type: 'upload', message: 'New physics lecture uploaded by Sarah Connors', time: '10 mins ago', icon: 'fa-solid fa-cloud-arrow-up' },
+        { id: 2, type: 'alert', message: 'Low engagement detected in Math 101', time: '1 hour ago', icon: 'fa-solid fa-triangle-exclamation' },
+        { id: 3, type: 'system', message: 'System maintenance scheduled for tonight', time: '3 hours ago', icon: 'fa-solid fa-gears' },
+        { id: 4, type: 'upload', message: 'History class processing completed', time: '5 hours ago', icon: 'fa-solid fa-check-double' }
+    ];
+
+    return (
+        <div className="dashboard-container">
+            <header className="dashboard-header animate-fadeIn">
+                <div>
+                    <h1 className="welcome-text">Welcome back, {session.user?.name || 'Admin'}</h1>
+                    <p className="date-text">
+                        {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                </div>
+                <div className="user-profile">
+                    <div className="avatar-circle">
+                        {(session.user?.name || 'A').charAt(0)}
+                    </div>
+                </div>
+            </header>
+
+            {/* Quick Stats Row */}
+            <div className="stats-grid">
+                {stats.map((stat, index) => (
+                    <div key={index} className={`stat-card ${stat.color} animate-fadeInUp`} style={{ animationDelay: `${index * 0.1}s` }}>
+                        <div className="stat-icon-wrapper">
+                            <i className={stat.icon}></i>
+                        </div>
+                        <div className="stat-content">
+                            <h3>{stat.value}</h3>
+                            <p>{stat.title}</p>
+                        </div>
+                    </div>
+                ))}
             </div>
-            <div className="stat-card-glow"></div>
-          </div>
-        ))}
-      </div>
 
-      <div className="dashboard-charts">
-        <div className="chart-card">
-          <h3 className="chart-title">Teacher Distribution by Standard</h3>
-          <div className="chart-content">
-            <div className="bar-chart">
-              <div className="bar-item">
-                <div className="bar-label">Senior</div>
-                <div className="bar-wrapper">
-                  <div 
-                    className="bar-fill bar-senior" 
-                    style={{ width: `${(stats.seniorTeachers / stats.totalTeachers * 100) || 0}%` }}
-                  >
-                    <span className="bar-value">{stats.seniorTeachers}</span>
-                  </div>
+            <div className="dashboard-content-grid">
+                {/* Main Chart Area */}
+                <div className="chart-section glass-panel animate-scaleIn">
+                    <div className="section-header">
+                        <h2>{session.role === 'teacher' ? 'My Performance' : 'Teacher Distribution'}</h2>
+                        <button className="btn-icon"><i className="fa-solid fa-ellipsis"></i></button>
+                    </div>
+                    <div className="chart-placeholder">
+                        <div className="chart-bars">
+                            {[40, 70, 55, 90, 65, 80, 50].map((h, i) => (
+                                <div key={i} className="chart-bar-group">
+                                    <div className="bar" style={{ height: `${h}%` }}></div>
+                                    <span className="bar-label">Day {i + 1}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-              </div>
-              <div className="bar-item">
-                <div className="bar-label">Junior</div>
-                <div className="bar-wrapper">
-                  <div 
-                    className="bar-fill bar-junior" 
-                    style={{ width: `${(stats.juniorTeachers / stats.totalTeachers * 100) || 0}%` }}
-                  >
-                    <span className="bar-value">{stats.juniorTeachers}</span>
-                  </div>
+
+                {/* Right Column */}
+                <div className="side-panel">
+                    {/* Recent Activity */}
+                    <div className="activity-feed glass-panel animate-fadeInUp" style={{ animationDelay: '0.3s' }}>
+                        <div className="section-header">
+                            <h2>Recent Activity</h2>
+                            <button className="view-all">View All</button>
+                        </div>
+                        <div className="activity-list">
+                            {activities.map(act => (
+                                <div key={act.id} className="activity-item">
+                                    <div className={`activity-icon ${act.type}`}>
+                                        <i className={act.icon}></i>
+                                    </div>
+                                    <div className="activity-details">
+                                        <p className="activity-msg">{act.message}</p>
+                                        <span className="activity-time">{act.time}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="quick-actions glass-panel animate-fadeInUp" style={{ animationDelay: '0.4s' }}>
+                        <h3>Quick Actions</h3>
+                        <div className="action-buttons-grid">
+                            <button className="btn-quick primary">
+                                <i className="fa-solid fa-plus"></i>
+                                <span>Add {session.role === 'teacher' ? 'Video' : 'User'}</span>
+                            </button>
+                            <button className="btn-quick secondary">
+                                <i className="fa-solid fa-file-export"></i>
+                                <span>Export Report</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-              </div>
-              <div className="bar-item">
-                <div className="bar-label">Standard (1-10)</div>
-                <div className="bar-wrapper">
-                  <div 
-                    className="bar-fill bar-standard" 
-                    style={{ width: `${(stats.standardTeachers / stats.totalTeachers * 100) || 0}%` }}
-                  >
-                    <span className="bar-value">{stats.standardTeachers}</span>
-                  </div>
-                </div>
-              </div>
             </div>
-          </div>
         </div>
-
-        <div className="chart-card">
-          <h3 className="chart-title">Quick Actions</h3>
-          <div className="quick-actions">
-            <button className="action-btn action-primary" onClick={() => window.location.href = '/teachers'}>
-              <span className="action-icon">👥</span>
-              <span className="action-text">View Teachers</span>
-            </button>
-            <button className="action-btn action-success" onClick={() => window.location.href = '/videos'}>
-              <span className="action-icon">📹</span>
-              <span className="action-text">Upload Video</span>
-            </button>
-            <button className="action-btn action-info" onClick={() => window.location.href = '/teachers'}>
-              <span className="action-icon">➕</span>
-              <span className="action-text">Add Teacher</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default Dashboard;

@@ -1,7 +1,9 @@
 const menuConfig = [
   { title: "Dashboard", path: "/dashboard", icon: "fa-solid fa-home" },
   { title: "Users", path: "/users", icon: "fa-solid fa-users" },
-  { title: "Settings", path: "/settings", icon: "fa-solid fa-gear" },
+  { title: "Teachers", path: "/teachers", icon: "fa-solid fa-chalkboard-user" },
+  { title: "Schools", path: "/schools", icon: "fa-solid fa-school" },
+  { title: "Upload Lecture", path: "/upload", icon: "fa-solid fa-video" },
 ];
 
 export default menuConfig;
