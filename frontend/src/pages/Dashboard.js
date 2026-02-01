@@ -20,7 +20,7 @@ const Dashboard = () => {
 
     return (
         <div>
-            <Navbar />
+            {/* <Navbar /> */}
             <div className="dashboard-container">
                 <h1>Welcome, {user ? user.name : 'User'}!</h1>
                 <p>Role: {user ? user.role : ''}</p>
