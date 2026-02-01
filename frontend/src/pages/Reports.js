@@ -108,7 +108,7 @@ const Reports = () => {
 
     return (
         <div>
-            <Navbar />
+            {/* <Navbar /> */}
             <div className="reports-container">
                 <div className="reports-header">
                     <h1 className="reports-title">AI Analysis Reports</h1>

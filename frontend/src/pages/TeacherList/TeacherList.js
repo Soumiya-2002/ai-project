@@ -47,27 +47,38 @@ const TeacherList = () => {
     const loadSchools = async () => {
         try {
             const { data } = await api.get('/schools');
-            setSchools(data || []);
+            let list = [];
+            // Robustly handle response structure (array vs object with data property)
+            if (Array.isArray(data)) list = data;
+            else if (data && Array.isArray(data.data)) list = data.data;
+
+            setSchools(list);
+
             // Set default school if available
-            if (data && data.length > 0) {
-                setFormData(prev => ({ ...prev, school_id: data[0].id }));
+            if (list.length > 0) {
+                setFormData(prev => ({ ...prev, school_id: list[0]?.id || '' }));
             }
         } catch (error) {
             console.error("Failed to load schools", error);
+            setSchools([]);
         }
     };
 
     const loadTeachers = async (startPage) => {
         try {
             const { data } = await api.get(`/teachers?page=${startPage}&limit=${limit}`);
-            if (data.data) {
+            if (data && Array.isArray(data.data)) {
                 setTeachers(data.data);
-                setTotalPages(data.totalPages);
+                setTotalPages(data.totalPages || 0);
+            } else if (Array.isArray(data)) {
+                setTeachers(data);
+                setTotalPages(1);
             } else {
-                setTeachers(data || []);
+                setTeachers([]);
             }
         } catch (error) {
             console.error(error);
+            setTeachers([]);
         }
     };
 
@@ -127,11 +138,13 @@ const TeacherList = () => {
                 const id = teachers[editingTeacher].id;
                 await api.put(`/teachers/${id}`, payload);
                 toast.success("Teacher updated");
+                loadTeachers(page);
             } else {
                 await api.post('/teachers', payload);
                 toast.success("Teacher created & linked to User account");
+                setPage(1);
+                loadTeachers(1);
             }
-            loadTeachers();
             resetForm();
         } catch (error) {
             console.error(error);
@@ -160,7 +173,7 @@ const TeacherList = () => {
                 const id = teachers[index].id;
                 await api.delete(`/teachers/${id}`);
                 toast.info("Teacher deleted");
-                loadTeachers();
+                loadTeachers(page);
             } catch (error) {
                 console.error(error);
             }
@@ -176,7 +189,7 @@ const TeacherList = () => {
                 status: newStatus
             });
             toast.success(`Teacher ${newStatus === 'Active' ? 'Activated' : 'Blocked'}`);
-            loadTeachers();
+            loadTeachers(page);
         } catch (error) {
             console.error(error);
             toast.error("Failed to update status");
