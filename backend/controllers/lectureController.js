@@ -1,4 +1,4 @@
-const { Lecture, Teacher, Class } = require('../models');
+const { Lecture, Teacher, Class, User, School } = require('../models');
 
 const scheduleLecture = async (req, res) => {
     try {
@@ -43,9 +43,20 @@ const getLectures = async (req, res) => {
 
         const lectures = await Lecture.findAll({
             where: whereClause,
-            include: [ // Include basic info
-                { model: Class, attributes: ['name', 'section'] },
-                { model: Teacher, attributes: ['id'] }
+            order: [['id', 'DESC']], // Sort purely by ID descending (newest created first)
+            include: [
+                {
+                    model: Class,
+                    attributes: ['name', 'section']
+                },
+                {
+                    model: Teacher,
+                    attributes: ['id'],
+                    include: [
+                        { model: User, attributes: ['name', 'email'] },
+                        { model: School, attributes: ['name', 'address'] }
+                    ]
+                }
             ]
         });
         res.json(lectures);

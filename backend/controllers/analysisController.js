@@ -2,6 +2,7 @@ const { Report, Lecture } = require('../models');
 const { processAudio } = require('../services/ai/vapiService');
 const { generateAnalysis } = require('../services/ai/geminiService');
 const { generateRubricScore } = require('../services/ai/nlmService');
+const { generatePDF } = require('../services/pdfGenerator');
 
 const runAnalysis = async (req, res) => {
     try {
@@ -58,7 +59,24 @@ const getReport = async (req, res) => {
     }
 };
 
+const downloadReport = async (req, res) => {
+    try {
+        const { lecture_id } = req.params;
+        const report = await Report.findOne({ where: { lecture_id } });
+
+        if (!report) {
+            return res.status(404).json({ message: 'Report not found' });
+        }
+
+        generatePDF(report, res);
+    } catch (err) {
+        console.error("PDF Generation Error:", err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
 module.exports = {
     runAnalysis,
-    getReport
+    getReport,
+    downloadReport
 };

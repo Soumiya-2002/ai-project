@@ -26,14 +26,15 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/schools', schoolRoutes);
-app.use('/api/teachers', require('./routes/teacherRoutes'));
-app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/lectures', lectureRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/analysis', analysisRoutes);
-app.use('/api/dashboard', require('./routes/dashboardRoutes'));
+app.use('/auth', authRoutes);
+app.use('/schools', schoolRoutes);
+app.use('/teachers', require('./routes/teacherRoutes'));
+app.use('/users', require('./routes/userRoutes'));
+app.use('/lectures', lectureRoutes);
+app.use('/upload', uploadRoutes);
+app.use('/analysis', analysisRoutes);
+app.use('/dashboard', require('./routes/dashboardRoutes'));
+app.use('/gemini', require('./routes/geminiRoutes')); // Gemini AI analysis routes
 
 app.get('/', (req, res) => {
     res.send('API is running...');

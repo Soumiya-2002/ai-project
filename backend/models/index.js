@@ -10,7 +10,7 @@ const Rubric = require('./Rubric');
 
 const syncDatabase = async (retries = 3) => {
     try {
-        await sequelize.sync({ alter: true }); // Enable alter to add new columns
+        await sequelize.authenticate();
         console.log('Database & tables synced with alterations!');
     } catch (error) {
         console.error('Error syncing database:', error);

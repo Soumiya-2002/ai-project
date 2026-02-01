@@ -11,7 +11,6 @@ const Teacher = sequelize.define('Teacher', {
     },
     user_id: {
         type: DataTypes.INTEGER,
-        unique: true,
         allowNull: false,
         references: {
             model: User,
@@ -39,7 +38,14 @@ const Teacher = sequelize.define('Teacher', {
         defaultValue: 0
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    indexes: [
+        {
+            unique: true,
+            fields: ['user_id'],
+            name: 'teachers_user_id_unique'
+        }
+    ]
 });
 
 // Associations

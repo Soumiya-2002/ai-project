@@ -1,0 +1,408 @@
+/* Reports.css - Modern Dashboard Styling */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.reports-container {
+    min-height: 100vh;
+    background-color: #f3f4f6;
+    font-family: 'Inter', sans-serif;
+    color: #1f2937;
+    /* margin-left handled by AdminLayout */
+    padding: 0;
+}
+
+@media (max-width: 768px) {
+    .reports-container {
+        margin-left: 0;
+        padding: 1rem;
+    }
+}
+
+/* Header */
+.reports-header {
+    margin-bottom: 2rem;
+}
+
+.reports-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.reports-subtitle {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+/* Main Grid Layout */
+.reports-grid {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+@media (max-width: 1024px) {
+    .reports-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Sidebar / Lecture List Panel */
+.lectures-panel {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+    height: calc(100vh - 120px);
+    display: flex;
+    flex-direction: column;
+}
+
+.lectures-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.lectures-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.lectures-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.lecture-item {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.lecture-item:hover {
+    background-color: #f9fafb;
+}
+
+.lecture-item.active {
+    background-color: #eff6ff;
+    border-left: 4px solid #3b82f6;
+}
+
+.lecture-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.lecture-meta {
+    font-size: 0.8rem;
+    color: #6b7280;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-completed {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+/* Report Content Panel */
+.report-content-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Search Bar */
+.search-container {
+    background: white;
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.search-input {
+    flex: 1;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-input:focus {
+    border-color: #000;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+    background: #000000;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 20% !important;
+}
+
+.btn-primary:hover {
+    background: #333333;
+}
+
+/* Report Detail Card */
+.report-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+}
+
+.report-header {
+    background: #f8fafc;
+    padding: 2rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.report-title-section h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.report-tags {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.tag {
+    background: #e2e8f0;
+    color: #475569;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.score-badge-large {
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+.score-value {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: black;
+    /* background-clip: text; */
+    -webkit-background-clip: text;
+    /* -webkit-text-fill-color: transparent; */
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 2rem 2rem 0;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid #f3f4f6;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.stat-label {
+    display: block;
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #334155;
+}
+
+/* Analysis Body */
+.analysis-body {
+    padding: 2rem;
+}
+
+/* Table Styling */
+.modern-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 1rem;
+}
+
+.modern-table th {
+    background: #f9fafb;
+    color: #111827;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 2px solid #000000;
+}
+
+.modern-table td {
+    padding: 1.25rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    vertical-align: top;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.table-row:hover td {
+    background-color: #fafafa;
+}
+
+/* Score Pills */
+.score-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.score-perfect {
+    background: #000000;
+    color: #ffffff;
+    border: 1px solid #000;
+}
+
+.score-good {
+    background: #6b7280;
+    color: #ffffff;
+}
+
+.score-poor {
+    background: #ffffff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+/* Status Badge */
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+}
+
+.status-completed {
+    background: #f9fafb;
+    color: #111827;
+    border: 1px solid #e5e7eb;
+}
+
+.lecture-item:hover .status-completed {
+    background: #111827;
+    color: #fff;
+    border-color: #111827;
+}
+
+/* Highlights Section */
+.highlights-section {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    border: 1px solid #e5e7eb;
+}
+
+.highlights-title {
+    color: #111827;
+    font-size: 1.1rem;
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.highlights-list {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: #4b5563;
+}
+
+.highlights-list li {
+    margin-bottom: 0.5rem;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #9ca3af;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    display: block;
+    opacity: 0.5;
+}
+
+.btn-auto-width {
+    width: auto !important;
+    min-width: 140px;
+}
