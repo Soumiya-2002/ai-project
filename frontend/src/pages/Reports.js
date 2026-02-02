@@ -4,7 +4,7 @@ import api from '../api/axios';
 import './Reports.css';
 
 const Reports = () => {
-    const [lectureId, setLectureId] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
     const [report, setReport] = useState(null);
     const [error, setError] = useState('');
     const [recentLectures, setRecentLectures] = useState([]);
@@ -25,7 +25,6 @@ const Reports = () => {
     };
 
     const handleSelectLecture = (id) => {
-        setLectureId(id.toString());
         fetchReport(id);
     };
 
@@ -44,7 +43,7 @@ const Reports = () => {
     const handleSearch = (e) => {
         e.preventDefault();
         // Try to find match in loaded lectures first
-        const term = String(lectureId).toLowerCase();
+        const term = String(searchTerm).toLowerCase();
         const match = recentLectures.find(l =>
             l.id.toString() === term ||
             (l.Teacher?.User?.name?.toLowerCase() || '').includes(term)
@@ -62,8 +61,8 @@ const Reports = () => {
 
     // Filter lectures for sidebar list
     const filteredLectures = recentLectures.filter(l => {
-        if (!lectureId) return true;
-        const term = String(lectureId).toLowerCase();
+        if (!searchTerm) return true;
+        const term = String(searchTerm).toLowerCase();
         return l.id.toString().includes(term) ||
             (l.Teacher?.User?.name?.toLowerCase() || '').includes(term);
     });
@@ -155,8 +154,8 @@ const Reports = () => {
                                 <input
                                     type="text"
                                     className="search-input"
-                                    value={lectureId}
-                                    onChange={(e) => setLectureId(e.target.value)}
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
                                     placeholder="Search by Lecture ID or Teacher Name..."
                                 />
                                 <button type="submit" className="btn-primary">
