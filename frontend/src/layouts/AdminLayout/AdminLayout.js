@@ -94,19 +94,20 @@ const AdminLayout = () => {
     return (
         <div className="admin-layout">
             <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
-                <div className="sidebar-header">
-                    <div className="logo" style={{ justifyContent: 'center', width: '100%' }}>
-                        <img
-                            src={logo}
-                            alt="NITI Solutions"
-                            style={{
-                                height: '40px',
-                                maxWidth: isSidebarOpen ? '100%' : '40px',
-                                objectFit: 'contain',
-                                filter: 'brightness(0) invert(1)' // Make logo white for dark sidebar
-                            }}
-                        />
-                    </div>
+                <div className="sidebar-header" style={{ justifyContent: isSidebarOpen ? 'space-between' : 'center', padding: isSidebarOpen ? '1.5rem' : '1rem' }}>
+                    {isSidebarOpen && (
+                        <div className="logo" style={{ display: 'flex', alignItems: 'center' }}>
+                            <img
+                                src={logo}
+                                alt="NITI Solutions"
+                                style={{
+                                    height: '32px',
+                                    objectFit: 'contain',
+                                    filter: 'brightness(0) invert(1)'
+                                }}
+                            />
+                        </div>
+                    )}
                     <button
                         className="sidebar-toggle"
                         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
