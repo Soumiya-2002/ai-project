@@ -103,7 +103,7 @@ const VideoUpload = () => {
     };
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f0fdf4' }}>
+        <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
             {/* Note: Navbar import path adjusted to ../../components/Navbar */}
             <div className="dashboard-container" style={{ padding: '2rem' }}>
                 <h2 className="page-title">Upload Lecture Video</h2>
@@ -244,7 +244,7 @@ const VideoUpload = () => {
                             style={{
                                 width: '100%',
                                 padding: '1rem',
-                                background: file ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : '#9ca3af',
+                                background: file ? '#000000' : '#9ca3af',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '8px',
