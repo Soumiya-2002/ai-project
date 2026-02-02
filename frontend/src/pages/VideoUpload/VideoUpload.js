@@ -151,7 +151,7 @@ const VideoUpload = () => {
                                 <option value="">-- Select Teacher --</option>
                                 {teachers.map(t => (
                                     <option key={t.id} value={t.id}>
-                                        {t.name} ({Array.isArray(t.subjects) ? t.subjects.join(', ') : t.subjects || 'N/A'})
+                                        {t.name}
                                     </option>
                                 ))}
                             </select>
