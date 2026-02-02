@@ -93,7 +93,6 @@ const Login = () => {
               <input type="checkbox" />
               <span>Remember me</span>
             </label>
-            <a href="#" className="forgot-password">Forgot Password?</a>
           </div>
 
           <button type="submit" className="btn-login" disabled={loading}>
@@ -104,7 +103,7 @@ const Login = () => {
               </>
             ) : (
               <>
-                Sign In
+                <span>Sign In</span>
                 <i className="fa-solid fa-arrow-right"></i>
               </>
             )}

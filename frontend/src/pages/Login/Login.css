@@ -335,6 +335,7 @@
 }
 
 .btn-login:hover {
+  color: #ffffff !important;
   transform: translateY(-2px);
   box-shadow:
     0 8px 20px rgba(102, 126, 234, 0.5),
@@ -362,7 +363,12 @@
 
 .btn-login>* {
   position: relative;
-  z-index: 1;
+  z-index: 2;
+}
+
+.btn-login span {
+  position: relative;
+  z-index: 2;
 }
 
 .btn-login i {
