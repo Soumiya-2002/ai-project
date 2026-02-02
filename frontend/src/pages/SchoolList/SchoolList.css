@@ -21,7 +21,7 @@
 }
 
 .page-title {
-    font-size: 2.2rem;
+    font-size: 2rem;
     font-weight: 800;
     color: #111;
     margin-bottom: 0.5rem;
@@ -38,6 +38,7 @@
     border: none;
     border-radius: 12px;
     font-weight: 600;
+    font-size: 1.1rem;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -139,13 +140,13 @@
 }
 
 .status-badge.active {
-    background: #4b5563;
-    color: white;
+    background: #dcfce7;
+    color: #15803d;
 }
 
 .status-badge.inactive {
-    background: #e5e7eb;
-    color: #111;
+    background: #fee2e2;
+    color: #b91c1c;
 }
 
 .inactive-row {
@@ -159,11 +160,23 @@
 }
 
 .btn-action {
-    padding: 6px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #64748b;
     cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-action:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #0f172a;
 }
 
 /* Modal same as teacher list roughly */

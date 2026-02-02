@@ -112,7 +112,7 @@ const SchoolList = () => {
                 await api.post('/schools', payload);
                 toast.success("School added");
             }
-            loadSchools();
+            loadSchools(page);
             resetForm();
         } catch (error) {
             console.error(error);
@@ -142,7 +142,7 @@ const SchoolList = () => {
                 const id = schools[index].id;
                 await api.delete(`/schools/${id}`);
                 toast.info("School deleted");
-                loadSchools();
+                loadSchools(page);
             } catch (error) {
                 console.error(error);
                 toast.error("Failed to delete");
@@ -160,7 +160,7 @@ const SchoolList = () => {
                 status: newStatus
             });
             toast.success(`School marked as ${newStatus}`);
-            loadSchools();
+            loadSchools(page);
         } catch (error) {
             console.error(error);
             toast.error("Failed to update status");
@@ -183,14 +183,14 @@ const SchoolList = () => {
                     <p className="page-subtitle">Oversee all registered schools and districts</p>
                 </div>
                 <button className="btn-add-school" onClick={() => setShowModal(true)}>
-                    <span className="btn-icon">🏫</span>
+                    <i className="fa-solid fa-plus btn-icon"></i>
                     Add School
                 </button>
             </div>
 
             <div className="filters-section">
                 <div className="search-box">
-                    <span className="search-icon">🔍</span>
+                    <i className="fa-solid fa-magnifying-glass search-icon"></i>
                     <input
                         type="text"
                         placeholder="Search schools..."
@@ -218,7 +218,7 @@ const SchoolList = () => {
                             <tr key={school.id || index} className={school.status === 'Inactive' ? 'inactive-row' : ''}>
                                 <td className="school-name">
                                     <div className="name-icon">
-                                        <div className="s-icon">🏫</div>
+                                        <div className="s-icon"><i className="fa-solid fa-school"></i></div>
                                         <div>
                                             <div style={{ fontWeight: 'bold' }}>{school.name}</div>
                                             <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>{school.address}</div>
@@ -228,8 +228,8 @@ const SchoolList = () => {
                                 <td>{school.principal}</td>
                                 <td>{school.email}</td>
                                 <td>
-                                    <span className="stat-pill">👨‍🏫 {school.teacher_count || 0}</span>
-                                    <span className="stat-pill">🎓 {school.student_count || 0}</span>
+                                    <span className="stat-pill"><i className="fa-solid fa-chalkboard-user"></i> {school.teacher_count || 0}</span>
+                                    <span className="stat-pill"><i className="fa-solid fa-graduation-cap"></i> {school.student_count || 0}</span>
                                 </td>
                                 <td>
                                     <span className={`status-badge ${school.status === 'Active' ? 'active' : 'inactive'}`}>
@@ -238,9 +238,11 @@ const SchoolList = () => {
                                 </td>
                                 <td>
                                     <div className="action-buttons">
-                                        <button className="btn-action btn-edit" onClick={() => handleEdit(index)}>✏️</button>
+                                        <button className="btn-action btn-edit" onClick={() => handleEdit(index)}>
+                                            <i className="fa-solid fa-pen-to-square"></i>
+                                        </button>
                                         <button className={`btn-action ${school.status === 'Active' ? 'btn-block' : 'btn-activate'}`} onClick={() => toggleStatus(index)}>
-                                            {school.status === 'Active' ? '🚫' : '✅'}
+                                            <i className={`fa-solid ${school.status === 'Active' ? 'fa-ban' : 'fa-check'}`}></i>
                                         </button>
                                     </div>
                                 </td>
@@ -273,7 +275,7 @@ const SchoolList = () => {
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h2>{editingSchool !== null ? 'Edit School' : 'Register School'}</h2>
-                            <button className="modal-close" onClick={resetForm}>✕</button>
+                            <button className="modal-close" onClick={resetForm}><i className="fa-solid fa-xmark"></i></button>
                         </div>
                         <form onSubmit={handleSubmit} className="school-form">
                             <div className="form-grid">
