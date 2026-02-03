@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
-const Teacher = require('./Teacher');
+const User = require('./User');
 const Class = require('./Class');
 
 const Lecture = sequelize.define('Lecture', {
@@ -13,7 +13,7 @@ const Lecture = sequelize.define('Lecture', {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: Teacher,
+            model: User,
             key: 'id'
         }
     },
@@ -48,8 +48,9 @@ const Lecture = sequelize.define('Lecture', {
     timestamps: true
 });
 
-Teacher.hasMany(Lecture, { foreignKey: 'teacher_id' });
-Lecture.belongsTo(Teacher, { foreignKey: 'teacher_id' });
+// User (as teacher) has many Lectures
+User.hasMany(Lecture, { foreignKey: 'teacher_id', as: 'lectures' });
+Lecture.belongsTo(User, { foreignKey: 'teacher_id', as: 'Teacher' });
 
 Class.hasMany(Lecture, { foreignKey: 'class_id' });
 Lecture.belongsTo(Class, { foreignKey: 'class_id' });

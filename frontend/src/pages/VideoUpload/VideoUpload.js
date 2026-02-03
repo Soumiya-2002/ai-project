@@ -44,10 +44,12 @@ const VideoUpload = () => {
 
     const loadTeachers = async (schoolId) => {
         try {
-            const { data } = await api.get(`/teachers?school_id=${schoolId}&limit=100`);
+            // Changed from /teachers to /users/teachers to fetch from Users table
+            const { data } = await api.get(`/users/teachers?school_id=${schoolId}&limit=100`);
             setTeachers(data.data || []);
         } catch (err) {
             console.error("Failed to load teachers", err);
+            console.error("Error response:", err.response?.data);
         }
     };
 
@@ -151,7 +153,7 @@ const VideoUpload = () => {
                                 <option value="">-- Select Teacher --</option>
                                 {teachers.map(t => (
                                     <option key={t.id} value={t.id}>
-                                        {t.name}
+                                        {t.name} ({t.email})
                                     </option>
                                 ))}
                             </select>

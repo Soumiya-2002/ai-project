@@ -35,13 +35,13 @@ const Dashboard = () => {
             icon: 'fa-school',
             path: '/schools'
         },
-        {
-            title: 'Teachers',
-            label: 'Active Educators',
-            value: stats.teachers,
-            icon: 'fa-chalkboard-user',
-            path: '/teachers'
-        },
+        // {
+        //     title: 'Teachers',
+        //     label: 'Active Educators',
+        //     value: stats.teachers,
+        //     icon: 'fa-chalkboard-user',
+        //     path: '/teachers'
+        // },
         {
             title: 'Users',
             label: 'System Access',

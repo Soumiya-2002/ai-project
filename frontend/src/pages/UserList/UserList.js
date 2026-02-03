@@ -8,11 +8,13 @@ const UserList = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
+    const [schools, setSchools] = useState([]);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         password: '',
-        role: 'school_admin'
+        role: 'school_admin',
+        school_id: ''
     });
 
     const [page, setPage] = useState(1);
@@ -21,7 +23,17 @@ const UserList = () => {
 
     useEffect(() => {
         loadUsers(page);
+        loadSchools();
     }, [page]);
+
+    const loadSchools = async () => {
+        try {
+            const { data } = await api.get('/schools');
+            setSchools(data.data || data);
+        } catch (error) {
+            console.error("Failed to load schools", error);
+        }
+    };
 
     const loadUsers = async (startPage) => {
         try {
@@ -45,13 +57,18 @@ const UserList = () => {
     };
 
     const validateForm = () => {
-        const { name, email, password } = formData;
+        const { name, email, password, role, school_id } = formData;
 
         if (!name) return toast.error("Name is required");
         if (!email) return toast.error("Email is required");
 
         // Password is required only for new users
         if (!editingUser && !password) return toast.error("Password is required for new users");
+
+        // School is required for school_admin and teacher
+        if ((role === 'school_admin' || role === 'teacher') && !school_id) {
+            return toast.error("Please select a school for this role");
+        }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
@@ -77,7 +94,7 @@ const UserList = () => {
             }
             setShowModal(false);
             setEditingUser(null);
-            setFormData({ name: '', email: '', password: '', role: 'school_admin' });
+            setFormData({ name: '', email: '', password: '', role: 'school_admin', school_id: '' });
             loadUsers();
         } catch (error) {
             console.error(error);
@@ -91,7 +108,8 @@ const UserList = () => {
             name: user.name,
             email: user.email,
             password: '', // Prevent password overwrite if left blank, backend handles optionality if implemented, else require new one. For now assume re-set.
-            role: user.role
+            role: user.role,
+            school_id: user.school_id || ''
         });
         setShowModal(true);
     };
@@ -118,7 +136,7 @@ const UserList = () => {
                 </div>
                 <button className="btn-add-teacher" onClick={() => {
                     setEditingUser(null);
-                    setFormData({ name: '', email: '', password: '', role: 'school_admin' });
+                    setFormData({ name: '', email: '', password: '', role: 'school_admin', school_id: '' });
                     setShowModal(true);
                 }}>
                     <i className="fa-solid fa-plus btn-icon"></i>
@@ -156,6 +174,18 @@ const UserList = () => {
                                         <option value="teacher">Teacher</option>
                                     </select>
                                 </div>
+                                {/* Show school dropdown only for school_admin and teacher */}
+                                {(formData.role === 'school_admin' || formData.role === 'teacher') && (
+                                    <div className="form-group">
+                                        <label>School <span className="required">*</span></label>
+                                        <select name="school_id" value={formData.school_id} onChange={handleInputChange} required>
+                                            <option value="">Select School</option>
+                                            {schools.map(school => (
+                                                <option key={school.id} value={school.id}>{school.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
                             <div className="form-actions">
                                 <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
@@ -173,6 +203,7 @@ const UserList = () => {
                             <th>Name</th>
                             <th>Email</th>
                             <th>Role</th>
+                            <th>School</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -186,6 +217,7 @@ const UserList = () => {
                                         {user.role}
                                     </span>
                                 </td>
+                                <td>{user.school || 'N/A'}</td>
                                 <td>
                                     {user.role !== 'super_admin' && (
                                         <div className="action-buttons">

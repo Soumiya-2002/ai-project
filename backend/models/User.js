@@ -1,6 +1,7 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
 const Role = require('./Role');
+const School = require('./School');
 
 const User = sequelize.define('User', {
     id: {
@@ -30,6 +31,14 @@ const User = sequelize.define('User', {
             model: Role,
             key: 'id'
         }
+    },
+    school_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true, // Optional - only for school_admin and teacher
+        references: {
+            model: 'Schools',
+            key: 'id'
+        }
     }
 }, {
     timestamps: true,
@@ -44,5 +53,8 @@ const User = sequelize.define('User', {
 
 Role.hasMany(User, { foreignKey: 'role_id' });
 User.belongsTo(Role, { foreignKey: 'role_id' });
+
+School.hasMany(User, { foreignKey: 'school_id' });
+User.belongsTo(School, { foreignKey: 'school_id' });
 
 module.exports = User;

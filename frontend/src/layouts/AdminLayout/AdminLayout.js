@@ -30,13 +30,16 @@ const AdminLayout = () => {
         ];
 
         // Check against normalized strings
-        if (currentRole === 'superadmin') {
+        if (currentRole === 'superadmin' || currentRole === 'schooladmin') {
             items.push({
                 path: '/users',
                 icon: 'fa-solid fa-users',
                 label: 'Users',
                 description: 'Manage All Users'
             });
+        }
+
+        if (currentRole === 'superadmin') {
             items.push({
                 path: '/schools',
                 icon: 'fa-solid fa-school',
@@ -45,14 +48,14 @@ const AdminLayout = () => {
             });
         }
 
-        if (currentRole === 'superadmin' || currentRole === 'schooladmin') {
-            items.push({
-                path: '/teachers',
-                icon: 'fa-solid fa-chalkboard-user',
-                label: 'Teachers',
-                description: 'Manage Teachers'
-            });
-        }
+        // if (currentRole === 'superadmin' || currentRole === 'schooladmin') {
+        //     items.push({
+        //         path: '/teachers',
+        //         icon: 'fa-solid fa-chalkboard-user',
+        //         label: 'Teachers',
+        //         description: 'Manage Teachers'
+        //     });
+        // }
 
         items.push({
             path: '/upload',
@@ -61,7 +64,7 @@ const AdminLayout = () => {
             description: 'Upload & Manage'
         });
 
-        if (currentRole === 'superadmin' || currentRole === 'schooladmin') {
+        if (currentRole === 'superadmin' || currentRole === 'schooladmin' || currentRole === 'teacher') {
             items.push({
                 path: '/reports',
                 icon: 'fa-solid fa-file-contract',

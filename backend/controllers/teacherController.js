@@ -7,8 +7,17 @@ const getTeachers = async (req, res) => {
         const whereClause = {};
         const offset = (page - 1) * limit;
 
-        // If school_id is provided (for Super Admin querying a specific school)
-        if (school_id) {
+        const userRole = req.user?.role;
+        const userId = req.user?.id;
+
+        // If School Admin or Teacher, filter by their school
+        if (userRole === 'school_admin' || userRole === 'teacher') {
+            const currentUser = await User.findByPk(userId);
+            if (currentUser && currentUser.school_id) {
+                whereClause.school_id = currentUser.school_id;
+            }
+        } else if (school_id) {
+            // Super Admin can filter by specific school
             whereClause.school_id = school_id;
         }
 
@@ -57,6 +66,16 @@ const addTeacher = async (req, res) => {
             return res.status(400).json({ message: 'User already exists' });
         }
 
+        // If logged-in user is School Admin, enforce they can only create teachers for their school
+        const userRole = req.user?.role;
+        const userId = req.user?.id;
+        if (userRole === 'school_admin') {
+            const currentUser = await User.findByPk(userId);
+            if (currentUser && currentUser.school_id && school_id != currentUser.school_id) {
+                return res.status(403).json({ message: 'You can only create teachers for your own school' });
+            }
+        }
+
         // Create User
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password || '123456', salt); // Default password if not provided
@@ -67,7 +86,8 @@ const addTeacher = async (req, res) => {
             name,
             email,
             password: hashedPassword,
-            role_id: teacherRole.id
+            role_id: teacherRole.id,
+            school_id: school_id  // Assign school_id to User as well
         });
 
         // Create Teacher Profile

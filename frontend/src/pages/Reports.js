@@ -46,7 +46,7 @@ const Reports = () => {
         const term = String(searchTerm).toLowerCase();
         const match = recentLectures.find(l =>
             l.id.toString() === term ||
-            (l.Teacher?.User?.name?.toLowerCase() || '').includes(term)
+            (l.Teacher?.name?.toLowerCase() || '').includes(term)
         );
 
         if (match) {
@@ -64,7 +64,7 @@ const Reports = () => {
         if (!searchTerm) return true;
         const term = String(searchTerm).toLowerCase();
         return l.id.toString().includes(term) ||
-            (l.Teacher?.User?.name?.toLowerCase() || '').includes(term);
+            (l.Teacher?.name?.toLowerCase() || '').includes(term);
     });
 
     const handleDownload = async () => {
@@ -129,7 +129,7 @@ const Reports = () => {
                                     onClick={() => handleSelectLecture(l.id)}
                                 >
                                     <div className="lecture-info">
-                                        <h4>{l.Teacher?.User?.name || 'Unknown Teacher'}</h4>
+                                        <h4>{l.Teacher?.name || 'Unknown Teacher'}</h4>
                                         <div className="lecture-meta">
                                             <span>#{l.id}</span>
                                             <span>•</span>
@@ -209,10 +209,10 @@ const Reports = () => {
                                                         <div>
                                                             <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '600', marginBottom: '0.25rem' }}>FACILITATOR</div>
                                                             <div style={{ fontSize: '1rem', fontWeight: '600', color: '#1e293b' }}>
-                                                                {selectedLecture?.Teacher?.User?.name || cob.header?.facilitator || 'Unknown'}
+                                                                {selectedLecture?.Teacher?.name || cob.header?.facilitator || 'Unknown'}
                                                             </div>
                                                             <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                                                                {selectedLecture?.Teacher?.User?.email || ''}
+                                                                {selectedLecture?.Teacher?.email || ''}
                                                             </div>
                                                         </div>
                                                         <div>

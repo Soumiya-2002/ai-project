@@ -1,4 +1,4 @@
-const { Lecture, Teacher, Class, User, School } = require('../models');
+const { Lecture, Class, User, School } = require('../models');
 
 const scheduleLecture = async (req, res) => {
     try {
@@ -41,6 +41,38 @@ const getLectures = async (req, res) => {
         if (class_id) whereClause.class_id = class_id;
         if (date) whereClause.date = date;
 
+        // Role-based filtering
+        const userRole = req.user?.role;
+        const userId = req.user?.id;
+
+        if (userRole === 'school_admin' || userRole === 'teacher') {
+            const currentUser = await User.findByPk(userId);
+            if (currentUser && currentUser.school_id) {
+                // Get all users with teacher role from the same school
+                const { Role } = require('../models');
+                const teacherRole = await Role.findOne({ where: { name: 'teacher' } });
+
+                const schoolTeachers = await User.findAll({
+                    where: {
+                        school_id: currentUser.school_id,
+                        role_id: teacherRole.id
+                    },
+                    attributes: ['id']
+                });
+                const teacherIds = schoolTeachers.map(t => t.id);
+
+                // Filter lectures by teachers from the same school
+                if (whereClause.teacher_id) {
+                    // If teacher_id is already specified, verify it's from the same school
+                    if (!teacherIds.includes(parseInt(whereClause.teacher_id))) {
+                        return res.json([]); // Return empty if trying to access other school's data
+                    }
+                } else {
+                    whereClause.teacher_id = teacherIds;
+                }
+            }
+        }
+
         const lectures = await Lecture.findAll({
             where: whereClause,
             order: [['id', 'DESC']], // Sort purely by ID descending (newest created first)
@@ -50,10 +82,10 @@ const getLectures = async (req, res) => {
                     attributes: ['name', 'section']
                 },
                 {
-                    model: Teacher,
-                    attributes: ['id'],
+                    model: User,
+                    as: 'Teacher', // Using alias defined in Lecture model
+                    attributes: ['id', 'name', 'email'],
                     include: [
-                        { model: User, attributes: ['name', 'email'] },
                         { model: School, attributes: ['name', 'address'] }
                     ]
                 }

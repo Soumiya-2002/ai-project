@@ -70,7 +70,7 @@ const login = async (req, res) => {
         // Check if user exists
         let user = await User.findOne({
             where: { email },
-            include: Role
+            include: [Role, { model: require('../models').School, required: false }]
         });
 
         if (!user) {
@@ -91,16 +91,6 @@ const login = async (req, res) => {
             }
         };
 
-        // Fetch School ID if applicable
-        let schoolId = null;
-        if (user.Role.name === 'teacher') {
-            const teacher = await Teacher.findOne({ where: { user_id: user.id } });
-            if (teacher) schoolId = teacher.school_id;
-        } else if (user.Role.name === 'school_admin') {
-            const school = await require('../models').School.findOne({ where: { email: user.email } });
-            if (school) schoolId = school.id;
-        }
-
         jwt.sign(
             payload,
             process.env.JWT_SECRET,
@@ -113,7 +103,8 @@ const login = async (req, res) => {
                         id: user.id,
                         name: user.name,
                         role: user.Role.name,
-                        school_id: schoolId
+                        school_id: user.school_id,
+                        school_name: user.School ? user.School.name : null
                     }
                 });
             }

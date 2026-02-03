@@ -1,4 +1,4 @@
-const { School, Class } = require('../models');
+const { School, Class, User } = require('../models');
 
 const addSchool = async (req, res) => {
     try {
@@ -41,7 +41,20 @@ const getSchools = async (req, res) => {
         const { page = 1, limit = 10 } = req.query;
         const offset = (page - 1) * limit;
 
+        let whereClause = {};
+        const userRole = req.user?.role;
+        const userId = req.user?.id;
+
+        // If School Admin or Teacher, show only their school
+        if (userRole === 'school_admin' || userRole === 'teacher') {
+            const currentUser = await User.findByPk(userId);
+            if (currentUser && currentUser.school_id) {
+                whereClause.id = currentUser.school_id;
+            }
+        }
+
         const { count, rows } = await School.findAndCountAll({
+            where: whereClause,
             limit: parseInt(limit),
             offset: parseInt(offset)
         });
