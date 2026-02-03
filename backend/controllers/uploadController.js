@@ -18,7 +18,7 @@ const mammoth = require('mammoth');
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit
+    limits: { fileSize: 5000 * 1024 * 1024 }, // 500MB limit
     fileFilter: function (req, file, cb) {
         // Allow Video, PDF, and DOCX
         if (file.fieldname === 'video') {
@@ -97,8 +97,9 @@ const uploadVideo = async (req, res) => {
                         await lecture.save();
                     }
                 } else if (teacher_id && date) {
+                    // teacher_id is now User ID directly (no Teacher table needed)
                     lecture = await Lecture.create({
-                        teacher_id,
+                        teacher_id, // User ID from Users table
                         date,
                         lecture_number: lecture_number || 1,
                         video_url: `/uploads/${videoFile.filename}`,
