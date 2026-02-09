@@ -70,15 +70,22 @@ const extractText = async (file) => {
 
 const uploadVideo = async (req, res) => {
     upload(req, res, async (err) => {
+        console.log("--> Upload Controller Hit");
         if (err) {
+            console.error("Multer Error:", err);
             return res.status(400).json({ message: err });
         } else {
+            console.log("Files:", req.files ? Object.keys(req.files) : "None");
+            console.log("Body:", req.body);
+
             // Check if video exists
             if (!req.files || !req.files.video) {
+                console.warn("No video file found in request");
                 return res.status(400).json({ message: 'No video selected!' });
             }
 
             const videoFile = req.files.video[0];
+            console.log("Video uploaded:", videoFile.filename);
 
             try {
                 // Extract text from auxiliary files
@@ -90,6 +97,7 @@ const uploadVideo = async (req, res) => {
                 let lecture;
 
                 if (lecture_id) {
+                    console.log("Updating existing lecture:", lecture_id);
                     lecture = await Lecture.findByPk(lecture_id);
                     if (lecture) {
                         lecture.video_url = `/uploads/${videoFile.filename}`;
@@ -97,6 +105,7 @@ const uploadVideo = async (req, res) => {
                         await lecture.save();
                     }
                 } else if (teacher_id && date) {
+                    console.log("Creating new lecture for teacher:", teacher_id, "on", date);
                     // teacher_id is now User ID directly (no Teacher table needed)
                     lecture = await Lecture.create({
                         teacher_id, // User ID from Users table
@@ -105,22 +114,69 @@ const uploadVideo = async (req, res) => {
                         video_url: `/uploads/${videoFile.filename}`,
                         status: 'completed'
                     });
+                } else {
+                    console.warn("Missing required fields for Lecture creation (lecture_id OR teacher_id + date)");
                 }
+
+                if (!lecture) {
+                    console.warn("Lecture object is null/undefined. Skipping AI Analysis.");
+                }
+
+                let analysisResult = null;
+                let pdfReportUrl = null;
 
                 if (lecture) {
                     const AiService = require('../services/AiService');
                     // Pass the extra context texts to the AI Service
-                    AiService.analyzeVideo(lecture.video_url, lecture.id, {
-                        cobParams: cobText,
-                        readingMaterial: readingText,
-                        lessonPlan: lessonText
-                    });
+                    console.log("Starting AI Analysis (Blocking)...");
+                    try {
+                        analysisResult = await AiService.analyzeVideo(lecture.video_url, lecture.id, {
+                            cobParams: cobText,
+                            readingMaterial: readingText,
+                            lessonPlan: lessonText
+                        });
+
+                        // --- GENERATE PDF REPORT ---
+                        if (analysisResult && !analysisResult.error) {
+                            try {
+                                const htmlTemplatePath = path.join(__dirname, '../content/COB Template - K1 to Gr 10.html');
+
+                                // Check if the template exists
+                                if (fs.existsSync(htmlTemplatePath)) {
+                                    const { generateReportFromHtml } = require('../services/htmlReportService');
+                                    // Use a simpler filename
+                                    const reportFilename = `report-${lecture.id}.pdf`;
+                                    const reportPath = path.join(__dirname, '../uploads', reportFilename);
+
+                                    await generateReportFromHtml(analysisResult, htmlTemplatePath, reportPath);
+                                    pdfReportUrl = `/uploads/${reportFilename}`;
+                                } else {
+                                    const { generatePDF } = require('../services/pdfService');
+                                    const reportFilename = `report-${lecture.id}.pdf`;
+                                    const reportPath = path.join(__dirname, '../uploads', reportFilename);
+
+                                    await generatePDF(analysisResult, reportPath);
+                                    pdfReportUrl = `/uploads/${reportFilename}`;
+                                }
+                                console.log("PDF Report Generated:", pdfReportUrl);
+                            } catch (pdfErr) {
+                                console.error("PDF Generation Failed:", pdfErr);
+                            }
+                        }
+
+                    } catch (aiErr) {
+                        console.error("AI Service Error:", aiErr);
+                        // Continue to return success for upload even if AI fails, but include error info
+                        analysisResult = { error: "AI Analysis Failed", details: aiErr.message };
+                    }
                 }
 
                 res.json({
-                    message: 'Upload Successful! AI Analysis Started.',
+                    message: 'Upload & Analysis Completed!',
                     file: `/uploads/${videoFile.filename}`,
-                    lecture
+                    lecture,
+                    analysis: analysisResult,
+                    pdfReport: pdfReportUrl
                 });
 
             } catch (dbErr) {

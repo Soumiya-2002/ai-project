@@ -5,7 +5,7 @@ const geminiService = require('./ai/geminiService');
 
 class AiService {
     async analyzeVideo(fileUrl, lectureId, context = {}) {
-        console.log(`Starting AI Pipeline for Lecture ${lectureId}...`);
+        console.log(`Starting AI Pipeline for Lecture ${lectureId}...`, context);
 
         const { cobParams, readingMaterial, lessonPlan } = context;
 
@@ -70,9 +70,11 @@ class AiService {
             });
 
             console.log(`AI Pipeline Success.Report Saved.`);
+            return finalReport;
 
         } catch (error) {
             console.error("AI Pipeline Failed:", error);
+            throw error; // Rethrow to handle in controller
         }
     }
 }

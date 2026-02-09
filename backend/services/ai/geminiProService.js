@@ -15,12 +15,14 @@ class GeminiProService {
 
         // Try different model names - the API key might support different versions
         this.modelNames = [
-            'gemini-pro',
-            'gemini-1.5-pro',
+            'gemini-2.5-flash',
+            'gemini-2.5-pro',
+            'gemini-2.0-flash',
+            'gemini-flash-latest',
+            'gemini-pro-latest',
             'gemini-1.5-flash',
-            'models/gemini-pro',
-            'models/gemini-1.5-pro',
-            'models/gemini-1.5-flash'
+            'gemini-1.5-pro',
+            'gemini-pro'
         ];
     }
 

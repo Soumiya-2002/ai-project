@@ -1,122 +1,138 @@
-const axios = require('axios');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+// Mock Data Fallback
+const getMockData = () => {
+    return {
+        "cob_report": {
+            "header": {
+                "facilitator": "Mock Teacher",
+                "topic_blm": "Mock Topic - Algebra",
+                "duration": "45m",
+                "session_type": "Classroom",
+                "school": "Greenwood High",
+                "grade": "7",
+                "date": new Date().toDateString()
+            },
+            "scores": {
+                "overall_percentage": "78%",
+                "summary": "(MOCK) The session was interactive but pace was fast. Concepts were covered but some students seemed confused. Note: This is an AI-simulated report due to API limits."
+            },
+            "parameters": [
+                { "category": "Concepts", "name": "Concepts & Explanation", "score": 2, "out_of": 2, "comment": "Observed: No conceptual errors found. Teacher explained the topics clearly." },
+                { "category": "Concepts", "name": "Rectification - Concepts", "score": 2, "out_of": 2, "comment": "Observed: All student errors were rectified immediately and correctly." },
+                { "category": "Delivery", "name": "Speaking Skills & Language", "score": 1, "out_of": 2, "comment": "Observed: Generally clear but some pronunciation issues with 'Algebraic'." },
+                { "category": "Resources", "name": "Resources & Aids", "score": 1, "out_of": 1, "comment": "Observed: Teacher used the whiteboard effectively." },
+                { "category": "Time Utilisation", "name": "Time Management", "score": 1, "out_of": 1, "comment": "Observed: Session started and ended on time." },
+                { "category": "Plan Adherence", "name": "Lesson Plan Followed", "score": 1, "out_of": 1, "comment": "Observed: Followed the sequence defined in the plan." }
+            ],
+            "highlights": ["Good energy", "Clear instructions"],
+            "other_observations": ["Students were engaged"]
+        }
+    };
+};
 
 const generateAnalysis = async (textInput) => {
-    // Placeholder for Gemini API call
-    console.log("Calling Gemini API with Input Length:", textInput.length);
+    console.log("Calling Gemini API for Detailed Report...");
 
     if (!process.env.GEMINI_API_KEY) {
         console.warn("GEMINI_API_KEY is missing. Returning mock COB Report.");
-        return {
-            "cob_analysis": {
-                "Open Sesame (Concept)": "Covered correctly based on the transcript.",
-                "Readers' Treasure": "Visual aids inferred from audio context.",
-                "Eye to Mind": "Engagement seems positive."
-            },
-            "errors_identified": [
-                "Simulated Error: Introduction was brief.",
-                "Simulated Error: Did not ask open-ended questions."
-            ],
-            "structural_compliance": "Mostly compliant with SOP."
-        };
+        return getMockData();
     }
 
-    try {
-        // For now, we simulate the "Real" analysis with high-quality mock data
-        // until the actual axios call to Google AI Studio is fully configured with their specific prompt.
+    const validModels = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-flash-latest",
+        "gemini-1.5-flash",
+        "gemini-pro"
+    ];
 
-        return {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+    // Construct Prompt once
+    const prompt = `
+        You are an elite Educational Auditor. Your job is to evaluate a classroom lecture video against a STRICT Rubric (COB).
+        
+        **INPUTS PROVIDED BELOW:**
+        ${textInput}
+
+        ---
+        **CRITICAL INSTRUCTION: STRICT RUBRIC ADHERENCE**
+        1. **Identify the Rubric**: Locate the section labeled 'COB Parameters (Parsed)' in the input. This text contains the list of parameters (e.g., "1. Concepts", "2. Open Ended Questions", etc.).
+        2. **Extract ALL Parameters**: You must generate a report that includes **EVERY SINGLE PARAMETER** mentioned in that COB text. Do not skip any. Do not invent new ones.
+        3. **Scoring**: 
+           - Assign a score for *each* parameter based strictly on the transcription evidence.
+           - If the COB text specifies "Out of 2" or "Out of 5", use that max score. If not specified, assume 2.
+        4. **Evidence**: You MUST write a specific comment quoting the teacher or describing the moment that justifies the score.
+
+        **OUTPUT FORMAT (JSON):**
+        {
             "cob_report": {
                 "header": {
-                    "facilitator": "Jane Doe",
-                    "school": "Greenwood High",
-                    "grade": "2",
-                    "section": "A",
-                    "subject": "EVS",
-                    "topic_blm": "Wild Animals",
-                    "observation_date": "Dec 12, 2023",
-                    "duration": "00:45",
-                    "session_type": "Concept Discussion",
-                    "interaction_no": "04"
+                    "facilitator": "Name",
+                    "topic_blm": "Topic",
+                    "duration": "Time",
+                    "session_type": "Classroom"
                 },
                 "scores": {
-                    "overall_percentage": "82.5%",
-                    "segments": {
-                        "Concepts": "90%",
-                        "Delivery": "85%",
-                        "Language": "80%",
-                        "Facilitator-Student": "75%"
-                    }
+                    "overall_percentage": "XX%",
+                    "summary": "Brief summary"
                 },
                 "parameters": [
                     {
-                        "category": "Concepts (50%)",
-                        "name": "1. Concepts",
-                        "description": "Makes no conceptual errors",
-                        "score": 2,
-                        "out_of": 2,
-                        "weight": "40.0%",
-                        "comment": "The facilitator made no conceptual errors. She delivered the concepts 'Wild vs Domestic' and 'Habitats' accurately and clearly."
-                    },
-                    {
-                        "category": "Concepts (50%)",
-                        "name": "2. Subject Language",
-                        "description": "Uses correct subject language",
-                        "score": 1,
-                        "out_of": 2,
-                        "weight": "2.5%",
-                        "comment": "The facilitator made a subject language error when she said 'Lion lives in a den' (TCR 12:30). [Lions live in correct term...]"
-                    },
-                    {
-                        "category": "Concepts (50%)",
-                        "name": "3. Quality of Explanation",
-                        "description": "Gives clear, lucid, logical explanations",
-                        "score": 2,
-                        "out_of": 2,
-                        "weight": "40.0%",
-                        "comment": "All explanations were clear and age-appropriate."
-                    },
-                    {
-                        "category": "Delivery (20%)",
-                        "name": "5. Preparation - Content",
-                        "description": "Is completely prepared to teach",
-                        "score": 1,
-                        "out_of": 1,
-                        "weight": "7.5%",
-                        "comment": "The facilitator was well prepared."
-                    },
-                    {
-                        "category": "Language (15%)",
-                        "name": "14. Speaking Skills",
-                        "description": "Clear voice, correct pronunciation",
-                        "score": 2,
-                        "out_of": 2,
-                        "weight": "80.0%",
-                        "comment": "Voice was clear and audible. No grammatical errors observed."
-                    },
-                    {
-                        "category": "Facilitator-Student (15%)",
-                        "name": "17. Student Engagement",
-                        "description": "Ensures maximum students are engaged",
-                        "score": 0,
-                        "out_of": 1,
-                        "weight": "0.0%",
-                        "comment": "Many students were unengaged at the back benches (TCR 15:00, 18:20)."
+                        "category": "Category inferred from COB (e.g. Concepts)",
+                        "name": "EXACT PARAMETER NAME FROM COB TEXT",
+                        "score": X,
+                        "out_of": Y,
+                        "weight": "If visible in COB else 'N/A'",
+                        "comment": "Specific transcript evidence."
                     }
                 ],
-                "highlights": [
-                    "Excellent use of flashcards for visual learning.",
-                    "Needs improvement in engaging back-benchers."
-                ],
-                "other_observations": [
-                    "The facilitator checked for understanding using the '3-2-1' method.",
-                    "Lighting was slightly dim during the board activity."
-                ]
+                "highlights": ["..."],
+                "other_observations": ["..."]
             }
-        };
-    } catch (error) {
-        console.error("Gemini API Error:", error);
-        throw error;
+        }
+    `;
+
+    // Try each model until one works
+    for (const modelName of validModels) {
+        try {
+            console.log(`Attempting generation with model: ${modelName}...`);
+            const model = genAI.getGenerativeModel({
+                model: modelName,
+                generationConfig: { responseMimeType: "application/json" }
+            });
+
+            const result = await model.generateContent(prompt);
+            const responseText = result.response.text();
+            console.log(`✅ Success with ${modelName}. Parsing response...`);
+
+            let cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            try {
+                return JSON.parse(cleanText);
+            } catch (parseError) {
+                console.warn(`JSON Parse Failed for ${modelName}. Trying to sanitize...`);
+                cleanText = cleanText.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+                try {
+                    return JSON.parse(cleanText);
+                } catch (retryError) {
+                    console.error(`Critical JSON Parse Error for ${modelName}. Continuing to next model if available...`);
+                    // If JSON is bad, we might want to try another model or just fail this model
+                    throw retryError;
+                }
+            }
+
+        } catch (error) {
+            console.warn(`❌ Model ${modelName} failed: ${error.message}`);
+            // Continue to the next model in the loop
+        }
     }
+
+    // If we exit the loop, all models failed
+    console.error("All Gemini models failed. Returning Mock Data.");
+    console.warn("⚠️ AI SERVICE ERROR. Returning Mock Data to allow workflow continuation.");
+    return getMockData();
 };
 
 module.exports = { generateAnalysis };
