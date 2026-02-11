@@ -40,6 +40,14 @@ const Lecture = sequelize.define('Lecture', {
         type: DataTypes.STRING, // URL to stored video
         allowNull: true
     },
+    grade: {
+        type: DataTypes.STRING,
+        allowNull: true // Store "Grade 10", "Kindergarten", etc.
+    },
+    section: {
+        type: DataTypes.STRING,
+        allowNull: true // Store "A", "B", "Rose", etc.
+    },
     status: {
         type: DataTypes.ENUM('scheduled', 'completed', 'cancelled'),
         defaultValue: 'scheduled'

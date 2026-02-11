@@ -102,6 +102,9 @@ const uploadVideo = async (req, res) => {
                     if (lecture) {
                         lecture.video_url = `/uploads/${videoFile.filename}`;
                         lecture.status = 'completed';
+                        // Update grade/section if provided
+                        if (req.body.grade) lecture.grade = req.body.grade;
+                        if (req.body.section) lecture.section = req.body.section;
                         await lecture.save();
                     }
                 } else if (teacher_id && date) {
@@ -112,6 +115,8 @@ const uploadVideo = async (req, res) => {
                         date,
                         lecture_number: lecture_number || 1,
                         video_url: `/uploads/${videoFile.filename}`,
+                        grade: req.body.grade || null,
+                        section: req.body.section || null,
                         status: 'completed'
                     });
                 } else {
@@ -127,13 +132,65 @@ const uploadVideo = async (req, res) => {
 
                 if (lecture) {
                     const AiService = require('../services/AiService');
+
+                    // Fetch Rich Metadata for AI Context
+                    const { User, School, Class } = require('../models');
+                    let contextMeta = {
+                        facilitator: 'Unknown Teacher',
+                        school: 'Unknown School',
+                        grade: lecture.grade || 'N/A', // Prioritize manual entry
+                        section: lecture.section || 'N/A', // Prioritize manual entry
+                        subject: 'General',
+                        date: lecture.date || new Date().toISOString().split('T')[0]
+                    };
+
+                    try {
+                        const fullLecture = await Lecture.findByPk(lecture.id, {
+                            include: [
+                                {
+                                    model: User,
+                                    as: 'Teacher',
+                                    include: [{ model: School }] // User -> School
+                                },
+                                {
+                                    model: Class,
+                                    include: [{ model: School }] // Class -> School
+                                }
+                            ]
+                        });
+
+                        if (fullLecture) {
+                            if (fullLecture.Teacher) {
+                                contextMeta.facilitator = fullLecture.Teacher.name;
+                                // Try getting school from Teacher's User profile
+                                if (fullLecture.Teacher.School) {
+                                    contextMeta.school = fullLecture.Teacher.School.name;
+                                }
+                            }
+
+                            if (fullLecture.Class) {
+                                // Only override if not already set by explicit input
+                                if (contextMeta.grade === 'N/A') contextMeta.grade = fullLecture.Class.name;
+                                if (contextMeta.section === 'N/A') contextMeta.section = fullLecture.Class.section;
+
+                                // If school wasn't found on teacher, try class
+                                if (!contextMeta.school && fullLecture.Class.School) {
+                                    contextMeta.school = fullLecture.Class.School.name;
+                                }
+                            }
+                        }
+                    } catch (metaErr) {
+                        console.warn("Failed to fetch rich metadata for AI:", metaErr.message);
+                    }
+
                     // Pass the extra context texts to the AI Service
                     console.log("Starting AI Analysis (Blocking)...");
                     try {
                         analysisResult = await AiService.analyzeVideo(lecture.video_url, lecture.id, {
                             cobParams: cobText,
                             readingMaterial: readingText,
-                            lessonPlan: lessonText
+                            lessonPlan: lessonText,
+                            meta: contextMeta
                         });
 
                         // --- GENERATE PDF REPORT ---

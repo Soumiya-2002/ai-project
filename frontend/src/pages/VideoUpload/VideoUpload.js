@@ -13,6 +13,8 @@ const VideoUpload = () => {
     const [selectedTeacher, setSelectedTeacher] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
     const [lectureNumber, setLectureNumber] = useState(1);
+    const [grade, setGrade] = useState('');
+    const [section, setSection] = useState('');
 
     // New File States
     const [cobParamsFile, setCobParamsFile] = useState(null);
@@ -71,8 +73,8 @@ const VideoUpload = () => {
     const handleUpload = async (e) => {
         e.preventDefault();
 
-        if (!selectedSchool || !selectedTeacher || !selectedDate || !file) {
-            alert("Please complete all steps.");
+        if (!selectedSchool || !selectedTeacher || !selectedDate || !file || !grade || !section) {
+            alert("Please complete all steps, including Grade and Section.");
             return;
         }
 
@@ -82,6 +84,8 @@ const VideoUpload = () => {
         formData.append('teacher_id', selectedTeacher);
         formData.append('date', selectedDate);
         formData.append('lecture_number', lectureNumber);
+        formData.append('grade', grade);
+        formData.append('section', section);
 
         // Append additional files if they exist
         if (cobParamsFile) formData.append('cobParams', cobParamsFile);
@@ -159,7 +163,7 @@ const VideoUpload = () => {
                             </select>
                         </div>
 
-                        {/* Step 3: Date & Lecture Number */}
+                        {/* Step 3: Date, Lecture Number, Grade & Section */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem', opacity: selectedTeacher ? 1 : 0.5 }}>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Lecture Date</label>
@@ -185,6 +189,32 @@ const VideoUpload = () => {
                                         <option key={num} value={num}>Lecture {num}</option>
                                     ))}
                                 </select>
+                            </div>
+
+                            {/* New Grade & Section Fields */}
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Grade / Class</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. 10 or Kindergarten"
+                                    value={grade}
+                                    onChange={(e) => setGrade(e.target.value)}
+                                    disabled={!selectedTeacher}
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Section</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. A, B, Rose"
+                                    value={section}
+                                    onChange={(e) => setSection(e.target.value)}
+                                    disabled={!selectedTeacher}
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                                    required
+                                />
                             </div>
                         </div>
 

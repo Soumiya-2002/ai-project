@@ -31,8 +31,8 @@ const getMockData = () => {
     };
 };
 
-const generateAnalysis = async (textInput) => {
-    console.log("Calling Gemini API for Detailed Report...");
+const generateAnalysis = async (textInput, meta = {}) => {
+    console.log("Calling Gemini API for Detailed Report...", meta);
 
     if (!process.env.GEMINI_API_KEY) {
         console.warn("GEMINI_API_KEY is missing. Returning mock COB Report.");
@@ -49,10 +49,18 @@ const generateAnalysis = async (textInput) => {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-    // Construct Prompt once
+    // Construct Prompt with specific metadata instructions
     const prompt = `
         You are an elite Educational Auditor. Your job is to evaluate a classroom lecture video against a STRICT Rubric (COB).
         
+        **METADATA CONTEXT (Use these exact values in the header):**
+        - Teacher Name: ${meta.facilitator || "Identify from transcript"}
+        - School: ${meta.school || "Identify from transcript"}
+        - Grade: ${meta.grade || "Identify"}
+        - Section: ${meta.section || "Identify"}
+        - Subject: ${meta.subject || "Identify"}
+        - Date: ${meta.date || "Today"}
+
         **INPUTS PROVIDED BELOW:**
         ${textInput}
 
@@ -64,14 +72,19 @@ const generateAnalysis = async (textInput) => {
            - Assign a score for *each* parameter based strictly on the transcription evidence.
            - If the COB text specifies "Out of 2" or "Out of 5", use that max score. If not specified, assume 2.
         4. **Evidence**: You MUST write a specific comment quoting the teacher or describing the moment that justifies the score.
-
+        
         **OUTPUT FORMAT (JSON):**
         {
             "cob_report": {
                 "header": {
-                    "facilitator": "Name",
-                    "topic_blm": "Topic",
-                    "duration": "Time",
+                    "facilitator": "${meta.facilitator || "Name"}",
+                    "school": "${meta.school || "School"}",
+                    "grade": "${meta.grade || "Grade"}",
+                    "section": "${meta.section || "Section"}",
+                    "subject": "${meta.subject || "Subject"}",
+                    "date": "${meta.date || "Date"}",
+                    "topic_blm": "Topic from transcript",
+                    "duration": "Time from transcript",
                     "session_type": "Classroom"
                 },
                 "scores": {
@@ -109,19 +122,31 @@ const generateAnalysis = async (textInput) => {
 
             let cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
 
+            let parsedResult;
             try {
-                return JSON.parse(cleanText);
+                parsedResult = JSON.parse(cleanText);
             } catch (parseError) {
                 console.warn(`JSON Parse Failed for ${modelName}. Trying to sanitize...`);
                 cleanText = cleanText.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
                 try {
-                    return JSON.parse(cleanText);
+                    parsedResult = JSON.parse(cleanText);
                 } catch (retryError) {
-                    console.error(`Critical JSON Parse Error for ${modelName}. Continuing to next model if available...`);
-                    // If JSON is bad, we might want to try another model or just fail this model
-                    throw retryError;
+                    console.error(`Critical JSON Parse Error for ${modelName}. Continuing to next model...`);
+                    continue;
                 }
             }
+
+            // ENFORCE METADATA OVERRIDE (To ensure no N/A if we have data)
+            if (parsedResult && parsedResult.cob_report && parsedResult.cob_report.header) {
+                if (meta.facilitator && meta.facilitator !== 'Unknown Teacher') parsedResult.cob_report.header.facilitator = meta.facilitator;
+                if (meta.school && meta.school !== 'Unknown School') parsedResult.cob_report.header.school = meta.school;
+                if (meta.grade && meta.grade !== 'N/A') parsedResult.cob_report.header.grade = meta.grade;
+                if (meta.section && meta.section !== 'N/A') parsedResult.cob_report.header.section = meta.section;
+                if (meta.subject && meta.subject !== 'N/A') parsedResult.cob_report.header.subject = meta.subject;
+                if (meta.date) parsedResult.cob_report.header.date = meta.date;
+            }
+
+            return parsedResult;
 
         } catch (error) {
             console.warn(`❌ Model ${modelName} failed: ${error.message}`);

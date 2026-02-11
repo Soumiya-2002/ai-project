@@ -41,9 +41,11 @@ class AiService {
 
             // 3. Gemini: COB Reporting (uses transcription + context)
             console.log("-> Step 3: Gemini COB Analysis");
-            // We pass the FULL Prompt including the parsed content
+
+            // Pass the FULL Prompt including the parsed content, AND the meta context
             const geminiResult = await geminiService.generateAnalysis(
-                `Transcription: ${transcription}\n\n${SOP_PROMPT}`
+                `Transcription: ${transcription}\n\n${SOP_PROMPT}`,
+                context.meta // Pass the metadata object
             );
 
             // 4. Aggregate & Save

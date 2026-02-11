@@ -1,214 +1,219 @@
 const puppeteer = require('puppeteer');
-const cheerio = require('cheerio');
 const fs = require('fs');
 
 /**
- * Generates a PDF report that mimics the official COB Audit Report format.
- * - Extracts the absolute-positioned HEADER from the template.
- * - Reconstructs the BODY as a semantic HTML table for dynamic content.
+ * Generates a PDF report matching the "Foundation for Ed-Equity" Audit Report format.
+ * Recreates the exact layout using clean HTML/CSS Tables instead of fragile absolute positioning.
  */
 const generateReportFromHtml = async (data, templatePath, outputPath) => {
     try {
-        console.log(`Generating Reconstructed Report from: ${templatePath}`);
+        console.log(`Generating Structured Audit Report...`);
 
-        let headerHtml = '';
-        const styles = [];
-
-        // 1. Process Template for Header extraction
-        if (fs.existsSync(templatePath)) {
-            const htmlContent = fs.readFileSync(templatePath, 'utf8');
-            const $ = cheerio.load(htmlContent);
-
-            // Extract existing styles
-            $('style').each((i, el) => styles.push($(el).html()));
-
-            // Extract Header elements (approx top < 320px)
-            const firstPage = $('.page').first();
-            const headerElements = [];
-            firstPage.find('.text-block').each((i, el) => {
-                const style = $(el).attr('style') || '';
-                const topMatch = style.match(/top:\s*([\d.]+)px/);
-                // The header usually ends before the first table (approx 310-320px)
-                if (topMatch && parseFloat(topMatch[1]) < 310) {
-                    headerElements.push($.html(el));
-                }
-            });
-            headerHtml = headerElements.join('\n');
-        } else {
-            console.warn("Template file not found. Using generic header.");
-            headerHtml = `<h1 style="text-align:center; font-family:Arial;">CLASSROOM OBSERVATION – AUDIT REPORT</h1>`;
-        }
-
-        // 2. Add Custom CSS to match Screenshot Style
-        styles.push(`
-            body { background-color: #fff; width: 1000px; margin: 0 auto; font-family: Arial, sans-serif; }
-            .header-container { position: relative; height: 320px; width: 1000px; overflow: hidden; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
-            .content-container { width: 95%; margin: 0 auto; }
-            
-            /* Table Style matching Screenshot */
-            .cob-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px; }
-            .cob-table th, .cob-table td { border: 1px solid #000; padding: 5px 8px; vertical-align: top; }
-            
-            /* Header Row */
-            .cob-table thead th { 
-                background-color: #f2f2f2; 
-                font-weight: bold; 
-                text-align: center;
-                border-bottom: 2px solid #000;
-            }
-            .header-param { width: 25%; text-align: left !important; text-decoration: underline; }
-            
-            /* Section Headers (e.g. Concepts (55%)) */
-            .section-header { 
-                background-color: #e6e6e6; 
-                font-weight: bold; 
-                text-align: right; 
-                padding-right: 20px !important;
-                color: #4444ff; /* Blueish text from screenshot */
-            }
-
-            /* Cells */
-            .score-cell { text-align: center; vertical-align: middle; font-weight: bold; font-size: 12px; }
-            .comment-cell { text-align: left; }
-            .weighted-cell { text-align: center; vertical-align: middle; }
-
-            /* Overall Score Box */
-            .overall-box { 
-                border: 2px solid #000; 
-                width: 60%; 
-                margin: 20px auto;
-                border-collapse: collapse;
-            }
-            .overall-box td { border: 1px solid #000; padding: 5px; }
-            .overall-header { background-color: #f2f2f2; font-weight: bold; text-align: center; color: blue; }
-        `);
-
-        // 3. Replace Header Placeholders
         const cob = data.cob_report || {};
         const headerData = cob.header || {};
-
-        const safeReplace = (key, val) => {
-            if (val) headerHtml = headerHtml.replace(new RegExp(key, 'g'), val);
-        };
-        safeReplace('First Last', headerData.facilitator);
-        safeReplace('SchoolName', headerData.school);
-        // Sometimes SchoolName appears as Xxx
-        safeReplace('Xxx', headerData.school);
-        safeReplace('Gr 0X', `Gr ${headerData.grade || '0'}`);
-        safeReplace('Mmm DD, YYYY', headerData.date);
-        safeReplace('HH:MM', headerData.duration);
-        safeReplace('Informed / Uninformed \\(Recommended\\)', 'Informed');
-
-        // 4. Build Body Content (Tables)
-
-        // A. Segment Scores Table (Concept, Delivery, Language, etc)
         const scores = cob.scores || {};
-        const segmentAuditHTML = `
-            <div style="font-family: Arial; font-size: 12px; position: absolute; top: 280px; left: 140px; font-weight: bold;">
-                Overall Score: <span style="font-size: 14px;">${scores.overall_percentage || 'N/A'}</span>
+        const params = cob.parameters || [];
+
+        // 1. Build The Header HTML (Foundation for Ed-Equity Style)
+        const headerHtml = `
+            <div style="font-family: Arial, sans-serif; position: relative; margin-bottom: 20px;">
+                <div style="text-align: right; font-weight: bold; color: #555; font-size: 14px; margin-bottom: 5px;">
+                    FOUNDATION FOR<br>
+                    <span style="font-size: 18px; color: #444;">ED-EQUITY</span>
+                </div>
+                
+                <div style="border-bottom: 2px solid #ccc; margin-bottom: 15px;"></div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">
+                    <div style="font-size: 16px; font-weight: bold; color: #0000CC;">CLASSROOM OBSERVATION – AUDIT REPORT</div>
+                    <div style="text-align: right; font-size: 10px; color: #333;">
+                        Filename: <b>${headerData.school || 'School'}_COB${headerData.round || '1'}_${headerData.facilitator || 'Teacher'}_${headerData.date || 'Date'}</b>
+                    </div>
+                </div>
+
+                <table class="meta-table">
+                    <tr>
+                        <td class="label">Teacher:</td>
+                        <td class="value">${headerData.facilitator || 'N/A'}</td>
+                        <td class="label">School:</td>
+                        <td class="value">${headerData.school || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Grade:</td>
+                        <td class="value">${headerData.grade || 'N/A'}</td>
+                        <td class="label">Section:</td>
+                        <td class="value">${headerData.section || 'N/A'}</td>
+                        <td class="label">Subject:</td>
+                        <td class="value">${headerData.subject || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Observation Date:</td>
+                        <td class="value">${headerData.date || 'N/A'}</td>
+                        <td class="label">BLM / Chapter:</td>
+                        <td class="value">${headerData.topic_blm || 'N/A'}</td>
+                        <td class="label">Duration:</td>
+                        <td class="value">${headerData.duration || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Type:</td>
+                        <td class="value">Informed</td>
+                        <td colspan="4" style="font-size: 9px; color: #0000CC; vertical-align: bottom;">
+                            Type of session = Assignment Solving, Concept Discussion, Activity, etc
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label">Type of Session:</td>
+                        <td class="value">${headerData.session_type || 'Classroom'}</td>
+                        <td class="label">Interaction No.:</td>
+                        <td class="value">01</td>
+                        <td class="label">Session No.:</td>
+                        <td class="value">01</td>
+                    </tr>
+                </table>
+
+                <div style="margin-top: 15px; display: flex; align-items: flex-start;">
+                    <div style="font-weight: bold; font-size: 12px; margin-right: 10px; padding-top: 5px;">Overall Score:</div>
+                    <div style="font-weight: bold; font-size: 14px; border: 1px solid #000; padding: 4px 8px;">${scores.overall_percentage || '0%'}</div>
+                    <div style="margin-left: 15px; font-size: 10px; font-style: italic; color: #0000CC; padding-top: 6px;">Overall Score is Autogenerated</div>
+                </div>
             </div>
-            
-            <table class="overall-box" style="margin-left: 240px; font-size: 10px; width: 500px;">
-                <tr class="overall-header">
-                    <td colspan="2">Segment Scores</td>
-                </tr>
-                <tr style="background-color: #ddd; font-weight: bold;">
-                    <td width="30%">Score</td>
-                    <td>Segments</td>
-                </tr>
-                <tr>
-                    <td class="score-cell">${getSegmentScore(cob.parameters, 'Concepts')}%</td>
-                    <td>Concepts</td>
-                </tr>
-                <tr>
-                    <td class="score-cell">${getSegmentScore(cob.parameters, 'Delivery')}%</td>
-                    <td>Delivery</td>
-                </tr>
-                <tr>
-                    <td class="score-cell">${getSegmentScore(cob.parameters, 'Language')}%</td>
-                    <td>Language</td>
-                </tr>
-                 <tr>
-                    <td class="score-cell">${getSegmentScore(cob.parameters, 'Teacher-Student')}%</td>
-                    <td>Teacher-Student Interaction</td>
-                </tr>
-            </table>
-            <div style="clear:both; height: 20px;"></div>
         `;
 
-        // B. Detailed Parameters Table
+        // 2. Build Segment Scores Table
+        const segmentHtml = `
+            <table class="segment-table" style="width: 60%; margin: 10px auto; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11px;">
+                <tr style="background-color: #f2f2f2;">
+                    <td colspan="2" style="text-align: center; font-weight: bold; color: #0000CC; border: 1px solid #000; padding: 4px;">Segment Scores</td>
+                </tr>
+                <tr style="background-color: #ddd; font-weight: bold;">
+                    <td style="border: 1px solid #000; padding: 4px; width: 30%; text-align: center;">Score</td>
+                    <td style="border: 1px solid #000; padding: 4px;">Segments</td>
+                </tr>
+                ${generateSegmentRow(params, 'Concepts', 'Concepts')}
+                ${generateSegmentRow(params, 'Delivery', 'Delivery')}
+                ${generateSegmentRow(params, 'Language', 'Language')}
+                ${generateSegmentRow(params, 'Resources', 'Resources')}
+                ${generateSegmentRow(params, 'Time', 'Time Management')}
+                ${generateSegmentRow(params, 'Plan', 'Plan Adherence')}
+                ${generateSegmentRow(params, 'Teacher-Student', 'Teacher-Student Interaction')}
+            </table>
+        `;
+
+        // 3. Build Detailed Parameters Table
         let tableBody = '';
+        const categories = [
+            { id: 'Concepts', weight: 55 },
+            { id: 'Delivery', weight: 20 },
+            { id: 'Language', weight: 10 },
+            { id: 'Resources', weight: 5 },
+            { id: 'Time', weight: 5 },
+            { id: 'Plan', weight: 5 },
+            { id: 'Teacher-Student', weight: 0 } // Check actual weight
+        ];
 
-        // Group by Category to insert Section Headers
-        const grouped = groupBy(cob.parameters || [], 'category');
-        const categories = ['Concepts', 'Delivery', 'Language', 'Resources', 'Time Utilisation', 'Plan Adherence'];
+        // Group parameters
+        const grouped = {};
+        params.forEach(p => {
+            // Fuzzy match category
+            let cat = 'Other';
+            if (p.category) {
+                if (p.category.includes('Concept')) cat = 'Concepts';
+                else if (p.category.includes('Delivery')) cat = 'Delivery';
+                else if (p.category.includes('Language')) cat = 'Language';
+                else if (p.category.includes('Resource')) cat = 'Resources';
+                else if (p.category.includes('Time')) cat = 'Time';
+                else if (p.category.includes('Plan')) cat = 'Plan';
+                else if (p.category.includes('Teacher') || p.category.includes('Student')) cat = 'Teacher-Student';
+            }
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push(p);
+        });
 
-        categories.forEach(cat => {
-            // Find keys that include the category name (e.g. "Concepts" matches "Concepts & Explanation")
-            const actualKey = Object.keys(grouped).find(k => k && k.includes(cat));
-            const params = grouped[cat] || (actualKey ? grouped[actualKey] : null);
-
-            if (params) {
-                // Section Header Row
+        categories.forEach(catObj => {
+            const catParams = grouped[catObj.id];
+            if (catParams && catParams.length > 0) {
+                // Category Header
                 tableBody += `
-                    <tr>
-                        <td colspan="5" class="section-header">${cat} (${getCategoryWeight(cat)}%)</td>
+                    <tr class="category-header">
+                        <td colspan="5" style="text-align: right; padding-right: 15px; background-color: #e6e6e6; font-weight: bold; color: #0000FF; border: 1px solid #000;">
+                            ${catObj.id} (${catObj.weight}%)
+                        </td>
                     </tr>
                 `;
 
-                params.forEach(p => {
-                    const weighted = p.score && p.out_of ? ((p.score / p.out_of) * getParamWeight(p.name)).toFixed(1) + '%' : '-';
+                // Add Parameters
+                catParams.forEach(p => {
+                    const score = p.score || 0;
+                    const max = p.out_of || 2;
+                    const weight = p.weight || 'N/A'; // Or calculate
+
+                    // Simple logic for "Weighted" column display if not provided
+                    let weightedDisplay = weight;
+                    if (headerData.school) { // Just a check to prevent crash
+                        const calc = (score / max) * (catObj.weight / catParams.length); // Rough approx if needed
+                        // But if AI provided it, use it.
+                    }
+
                     tableBody += `
                         <tr>
-                            <td><strong>${p.name.replace(cat, '').trim() || p.name}</strong><br><span style="font-size:9px; color:#555;">${getRubricDesc(p.score)}</span></td>
-                            <td class="score-cell">${p.score}</td>
-                            <td class="score-cell">${p.out_of}</td>
-                            <td class="weighted-cell">${weighted}</td>
-                            <td class="comment-cell">${p.comment || ''}</td>
+                            <td style="border: 1px solid #000; padding: 5px; width: 30%;">
+                                <b>${p.name}</b><br>
+                                <span style="font-size: 9px; color: #555;">(Score based on observation)</span>
+                            </td>
+                            <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle; font-weight: bold;">${score}</td>
+                            <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle;">${max}</td>
+                            <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle;">${weightedDisplay}</td>
+                            <td style="border: 1px solid #000; padding: 5px; font-size: 10px;">${p.comment || 'No comments provided.'}</td>
                         </tr>
                     `;
                 });
             }
         });
 
-        const mainTable = `
-            <table class="cob-table">
-                <thead>
-                    <tr>
-                        <th class="header-param">Parameter</th>
-                        <th width="8%">Score</th>
-                        <th width="8%">Out of</th>
-                        <th width="10%">Weighted</th>
-                        <th>Comments</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${tableBody}
-                </tbody>
-            </table>
-        `;
-
-        // 5. Final HTML Assembly
+        // 4. Assemble Final HTML
         const finalHtml = `
             <!DOCTYPE html>
             <html>
                 <head>
                     <meta charset="UTF-8">
-                    <style>${styles.join('\n')}</style>
+                    <style>
+                        body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; }
+                        .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+                        .meta-table td { padding: 4px; }
+                        .meta-table .label { font-weight: bold; width: 120px; }
+                        .meta-table .value { font-weight: bold; color: #000; border-bottom: 1px dotted #ccc; }
+                        
+                        .main-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+                        .main-table th { background-color: #f2f2f2; border: 1px solid #000; padding: 5px; text-align: center; font-weight: bold; }
+                        .main-table td { border: 1px solid #000; padding: 5px; vertical-align: top; }
+                    </style>
                 </head>
                 <body>
-                    <div class="header-container">
-                        ${headerHtml}
-                        ${segmentAuditHTML} <!-- Injecting the Segment Table into the absolute header space/bottom -->
-                    </div>
-                    <div class="content-container">
-                        ${mainTable}
+                    ${headerHtml}
+                    ${segmentHtml}
+                    <br>
+                    <table class="main-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th width="50">Score</th>
+                                <th width="50">Out of</th>
+                                <th width="60">Weighted</th>
+                                <th>Comments</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableBody}
+                        </tbody>
+                    </table>
+                    <div style="margin-top: 20px; font-size: 10px; text-align: center; color: #888;">
+                        Generated by AI School Audit System | Foundation for Ed-Equity
                     </div>
                 </body>
             </html>
         `;
 
-        // 6. PDF Generation
+        // 5. Generate PDF
         const browser = await puppeteer.launch({
             headless: 'new',
             args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -226,51 +231,25 @@ const generateReportFromHtml = async (data, templatePath, outputPath) => {
         return outputPath;
 
     } catch (error) {
-        console.error("HTML Report Gen Error:", error);
+        console.error("HTML Report Generation Error:", error);
         throw error;
     }
 };
 
-// Utilities
-function groupBy(arr, key) {
-    if (!arr) return {};
-    return arr.reduce((acc, x) => {
-        const k = x[key] || 'Other';
-        (acc[k] = acc[k] || []).push(x);
-        return acc;
-    }, {});
-}
+function generateSegmentRow(params, key, label) {
+    const catParams = params.filter(p => p.category && p.category.includes(key));
+    if (catParams.length === 0) return '';
 
-function getSegmentScore(params, category) {
-    if (!params) return 0;
-    const catParams = params.filter(p => p.category && p.category.includes(category));
-    if (!catParams.length) return 0;
-    const total = catParams.reduce((sum, p) => sum + (p.score || 0), 0);
-    const max = catParams.reduce((sum, p) => sum + (p.out_of || 0), 0);
-    return max ? ((total / max) * 100).toFixed(2) : 0;
-}
+    const score = catParams.reduce((acc, p) => acc + (p.score || 0), 0);
+    const total = catParams.reduce((acc, p) => acc + (p.out_of || 0), 0);
+    const percentage = total ? ((score / total) * 100).toFixed(2) + '%' : 'N/A';
 
-function getCategoryWeight(cat) {
-    if (cat.includes('Concept')) return 55;
-    if (cat.includes('Delivery')) return 20;
-    if (cat.includes('Language')) return 10;
-    if (cat.includes('Resources')) return 10;
-    if (cat.includes('Time')) return 10; // Approx
-    return 0;
-}
-
-function getParamWeight(name) {
-    // Rough logic based on screenshots
-    if (name.includes('Rectification')) return 30;
-    if (name.includes('Resource')) return 10;
-    return 100; // Default
-}
-
-function getRubricDesc(score) {
-    if (score === 2) return "(Meets expectation)";
-    if (score === 1) return "(Partial/One error)";
-    if (score === 0) return "(Multiple errors)";
-    return "";
+    return `
+        <tr>
+            <td style="border: 1px solid #000; padding: 4px; text-align: center;">${percentage}</td>
+            <td style="border: 1px solid #000; padding: 4px;">${label}</td>
+        </tr>
+    `;
 }
 
 module.exports = { generateReportFromHtml };
