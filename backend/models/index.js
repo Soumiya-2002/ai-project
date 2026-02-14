@@ -14,11 +14,12 @@ const syncDatabase = async (retries = 3) => {
         await sequelize.sync({ alter: true });
         console.log('Database & tables synced with alterations!');
     } catch (error) {
-        console.error('Error syncing database:', error);
         if (retries > 0 && error.parent && error.parent.code === 'ER_LOCK_DEADLOCK') {
-            console.log(`Deadlock detected. Retrying sync in 2 seconds... (${retries} retries left)`);
+            console.warn(`[Info] Database sync retry due to lock... (${retries} left)`);
             await new Promise(res => setTimeout(res, 2000));
             return syncDatabase(retries - 1);
+        } else {
+            console.error('Error syncing database:', error);
         }
     }
 };

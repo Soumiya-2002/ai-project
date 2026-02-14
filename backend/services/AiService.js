@@ -31,22 +31,25 @@ class AiService {
 
         try {
             // 1. Vapi: Audio Processing & Transcription
-            console.log("-> Step 1: Vapi Audio Analysis");
+            console.log("-> Step 1: Vapi Audio Analysis Started...");
             const vapiResult = await vapiService.processAudio(fileUrl);
+            console.log("   Step 1 Complete: Vapi Transcription Received.");
             const transcription = vapiResult.transcription || "No transcription available.";
 
             // 2. NLM: Rubric & Engagement Scoring (uses transcription)
-            console.log("-> Step 2: NLM Rubric Scoring");
+            console.log("-> Step 2: NLM Rubric Scoring Started...");
             const nlmResult = await nlmService.generateRubricScore(transcription);
+            console.log("   Step 2 Complete: NLM Scoring Generated.");
 
             // 3. Gemini: COB Reporting (uses transcription + context)
-            console.log("-> Step 3: Gemini COB Analysis");
+            console.log("-> Step 3: Gemini COB Analysis Started...");
 
             // Pass the FULL Prompt including the parsed content, AND the meta context
             const geminiResult = await geminiService.generateAnalysis(
                 `Transcription: ${transcription}\n\n${SOP_PROMPT}`,
                 context.meta // Pass the metadata object
             );
+            console.log("   Step 3 Complete: Gemini Analysis Finished.");
 
             // 4. Aggregate & Save
             const finalReport = {

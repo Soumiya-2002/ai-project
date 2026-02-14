@@ -80,94 +80,62 @@ const generateReportFromHtml = async (data, templatePath, outputPath) => {
         `;
 
         // 2. Build Segment Scores Table
-        const segmentHtml = `
-            <table class="segment-table" style="width: 60%; margin: 10px auto; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11px;">
-                <tr style="background-color: #f2f2f2;">
-                    <td colspan="2" style="text-align: center; font-weight: bold; color: #0000CC; border: 1px solid #000; padding: 4px;">Segment Scores</td>
-                </tr>
-                <tr style="background-color: #ddd; font-weight: bold;">
-                    <td style="border: 1px solid #000; padding: 4px; width: 30%; text-align: center;">Score</td>
-                    <td style="border: 1px solid #000; padding: 4px;">Segments</td>
-                </tr>
-                ${generateSegmentRow(params, 'Concepts', 'Concepts')}
-                ${generateSegmentRow(params, 'Delivery', 'Delivery')}
-                ${generateSegmentRow(params, 'Language', 'Language')}
-                ${generateSegmentRow(params, 'Resources', 'Resources')}
-                ${generateSegmentRow(params, 'Time', 'Time Management')}
-                ${generateSegmentRow(params, 'Plan', 'Plan Adherence')}
-                ${generateSegmentRow(params, 'Teacher-Student', 'Teacher-Student Interaction')}
-            </table>
-        `;
+        // Use the dynamic helper instead of hardcoded rows
+        const segmentHtml = generateDynamicSegmentTable(params);
 
         // 3. Build Detailed Parameters Table
         let tableBody = '';
-        const categories = [
-            { id: 'Concepts', weight: 55 },
-            { id: 'Delivery', weight: 20 },
-            { id: 'Language', weight: 10 },
-            { id: 'Resources', weight: 5 },
-            { id: 'Time', weight: 5 },
-            { id: 'Plan', weight: 5 },
-            { id: 'Teacher-Student', weight: 0 } // Check actual weight
-        ];
 
-        // Group parameters
+        // Dynamic Category Extraction
+        // We want to preserve the order if possible, or just group them.
+        // Let's deduce categories and weights from the parameters themselves if available, 
+        // or just group by 'category' string.
+
         const grouped = {};
+        const categoryOrder = []; // To keep track of order of appearance
+
         params.forEach(p => {
-            // Fuzzy match category
-            let cat = 'Other';
-            if (p.category) {
-                if (p.category.includes('Concept')) cat = 'Concepts';
-                else if (p.category.includes('Delivery')) cat = 'Delivery';
-                else if (p.category.includes('Language')) cat = 'Language';
-                else if (p.category.includes('Resource')) cat = 'Resources';
-                else if (p.category.includes('Time')) cat = 'Time';
-                else if (p.category.includes('Plan')) cat = 'Plan';
-                else if (p.category.includes('Teacher') || p.category.includes('Student')) cat = 'Teacher-Student';
+            const cat = p.category || 'General'; // Default if missing
+            if (!grouped[cat]) {
+                grouped[cat] = [];
+                categoryOrder.push(cat);
             }
-            if (!grouped[cat]) grouped[cat] = [];
             grouped[cat].push(p);
         });
 
-        categories.forEach(catObj => {
-            const catParams = grouped[catObj.id];
-            if (catParams && catParams.length > 0) {
-                // Category Header
+        categoryOrder.forEach(catName => {
+            const catParams = grouped[catName];
+            // Calculate pseudo-weight or use provided
+            const totalMaxScore = catParams.reduce((sum, p) => sum + (p.out_of || 0), 0);
+
+            // Render Category Header
+            tableBody += `
+                <tr class="category-header">
+                    <td colspan="5" style="text-align: right; padding-right: 15px; background-color: #e6e6e6; font-weight: bold; color: #0000FF; border: 1px solid #000;">
+                        ${catName}
+                    </td>
+                </tr>
+            `;
+
+            // Render Parameters for this Category
+            catParams.forEach(p => {
+                const score = p.score !== undefined ? p.score : 0;
+                const max = p.out_of || 2;
+                const weight = p.weight || 'N/A';
+
                 tableBody += `
-                    <tr class="category-header">
-                        <td colspan="5" style="text-align: right; padding-right: 15px; background-color: #e6e6e6; font-weight: bold; color: #0000FF; border: 1px solid #000;">
-                            ${catObj.id} (${catObj.weight}%)
+                    <tr>
+                        <td style="border: 1px solid #000; padding: 5px; width: 30%;">
+                            <b>${p.name}</b><br>
+                            <span style="font-size: 9px; color: #555;">(Score based on observation)</span>
                         </td>
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle; font-weight: bold;">${score}</td>
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle;">${max}</td>
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle;">${weight}</td>
+                        <td style="border: 1px solid #000; padding: 5px; font-size: 10px;">${p.comment || 'No comments provided.'}</td>
                     </tr>
                 `;
-
-                // Add Parameters
-                catParams.forEach(p => {
-                    const score = p.score || 0;
-                    const max = p.out_of || 2;
-                    const weight = p.weight || 'N/A'; // Or calculate
-
-                    // Simple logic for "Weighted" column display if not provided
-                    let weightedDisplay = weight;
-                    if (headerData.school) { // Just a check to prevent crash
-                        const calc = (score / max) * (catObj.weight / catParams.length); // Rough approx if needed
-                        // But if AI provided it, use it.
-                    }
-
-                    tableBody += `
-                        <tr>
-                            <td style="border: 1px solid #000; padding: 5px; width: 30%;">
-                                <b>${p.name}</b><br>
-                                <span style="font-size: 9px; color: #555;">(Score based on observation)</span>
-                            </td>
-                            <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle; font-weight: bold;">${score}</td>
-                            <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle;">${max}</td>
-                            <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle;">${weightedDisplay}</td>
-                            <td style="border: 1px solid #000; padding: 5px; font-size: 10px;">${p.comment || 'No comments provided.'}</td>
-                        </tr>
-                    `;
-                });
-            }
+            });
         });
 
         // 4. Assemble Final HTML
@@ -237,18 +205,49 @@ const generateReportFromHtml = async (data, templatePath, outputPath) => {
 };
 
 function generateSegmentRow(params, key, label) {
-    const catParams = params.filter(p => p.category && p.category.includes(key));
-    if (catParams.length === 0) return '';
+    // If key is null, it means we are just using the label as the exact category name
+    const searchKey = key || label;
 
-    const score = catParams.reduce((acc, p) => acc + (p.score || 0), 0);
-    const total = catParams.reduce((acc, p) => acc + (p.out_of || 0), 0);
-    const percentage = total ? ((score / total) * 100).toFixed(2) + '%' : 'N/A';
+    // Exact match or Include match depending on robust we want to be
+    // Using simple filter for now. If we want fully dynamic segments table:
+    // We should probably rewrite this function to iterate over the unique categories found.
+    return '';
+}
+
+// Helper to generate the full segment table dynamically
+function generateDynamicSegmentTable(params) {
+    const grouped = {};
+    params.forEach(p => {
+        const cat = p.category || 'General';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(p);
+    });
+
+    const rows = Object.keys(grouped).map(catName => {
+        const catParams = grouped[catName];
+        const score = catParams.reduce((acc, p) => acc + (p.score || 0), 0);
+        const total = catParams.reduce((acc, p) => acc + (p.out_of || 0), 0);
+        const percentage = total ? ((score / total) * 100).toFixed(0) + '%' : 'N/A';
+
+        return `
+            <tr>
+                <td style="border: 1px solid #000; padding: 4px; text-align: center;">${percentage}</td>
+                <td style="border: 1px solid #000; padding: 4px;">${catName}</td>
+            </tr>
+        `;
+    }).join('');
 
     return `
-        <tr>
-            <td style="border: 1px solid #000; padding: 4px; text-align: center;">${percentage}</td>
-            <td style="border: 1px solid #000; padding: 4px;">${label}</td>
-        </tr>
+        <table class="segment-table" style="width: 60%; margin: 10px auto; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11px;">
+            <tr style="background-color: #f2f2f2;">
+                <td colspan="2" style="text-align: center; font-weight: bold; color: #0000CC; border: 1px solid #000; padding: 4px;">Segment Scores</td>
+            </tr>
+            <tr style="background-color: #ddd; font-weight: bold;">
+                <td style="border: 1px solid #000; padding: 4px; width: 30%; text-align: center;">Score</td>
+                <td style="border: 1px solid #000; padding: 4px;">Segments</td>
+            </tr>
+            ${rows}
+        </table>
     `;
 }
 

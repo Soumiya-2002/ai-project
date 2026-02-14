@@ -66,12 +66,24 @@ const generateAnalysis = async (textInput, meta = {}) => {
 
         ---
         **CRITICAL INSTRUCTION: STRICT RUBRIC ADHERENCE**
-        1. **Identify the Rubric**: Locate the section labeled 'COB Parameters (Parsed)' in the input. This text contains the list of parameters (e.g., "1. Concepts", "2. Open Ended Questions", etc.).
-        2. **Extract ALL Parameters**: You must generate a report that includes **EVERY SINGLE PARAMETER** mentioned in that COB text. Do not skip any. Do not invent new ones.
+        1. **Identify the Rubric**: Locate the section labeled 'COB Parameters (Parsed)' in the input. 
+           - Look for headers like "Components", "Parameters", "Aspects", or "Indicators".
+           - Identified Categories become the 'category' field in output.
+           - All items under a category are the parameters.
+        2. **Extract ALL Parameters**: You must generate a report that includes **EVERY SINGLE PARAMETER** mentioned in that COB text. 
+           - **DO NOT SKIP ANY**. 
+           - **DO NOT SUMMARIZE OR GROUP THEM YOURSELF**.
+           - If the COB text has 50 items, your output 'parameters' array MUST have 50 items.
+           - Use the exact text for the 'name' field.
         3. **Scoring**: 
            - Assign a score for *each* parameter based strictly on the transcription evidence.
-           - If the COB text specifies "Out of 2" or "Out of 5", use that max score. If not specified, assume 2.
-        4. **Evidence**: You MUST write a specific comment quoting the teacher or describing the moment that justifies the score.
+           - If a parameter relates to "Preparation", "Content Accuracy", "Lesson Flow", or "Resources", you **MUST** cross-reference with the provided **Lesson Plan** and **Reading Material**.
+           - If the teacher deviates from the plan or misinterprets the reading material, deduct points accordingly.
+           - **CRITICAL**: You MUST extract the exact 'Out of' (Max Score) and 'Weightage' for each parameter from the provided COB text.
+             - Look for text like "(2 marks)", "Weightage: 1.5", "Max: 5", or columns indicating scores.
+             - If the text says "Score: 1-5", then 'out_of' is 5.
+             - If no max score is explicitly stated for a specific parameter, look for a category-level default. Only assume 2 if absolutely no information is present.
+        4. **Evidence**: You MUST write a specific comment quoting the teacher or describing the moment that justifies the score. Mention if the Lesson Plan was followed or if Reading Material was used effectively.
         
         **OUTPUT FORMAT (JSON):**
         {
@@ -93,8 +105,8 @@ const generateAnalysis = async (textInput, meta = {}) => {
                 },
                 "parameters": [
                     {
-                        "category": "Category inferred from COB (e.g. Concepts)",
-                        "name": "EXACT PARAMETER NAME FROM COB TEXT",
+                        "category": "Detected Category Name (e.g. 'Instructional Design')",
+                        "name": "EXACT PARAMETER TEXT",
                         "score": X,
                         "out_of": Y,
                         "weight": "If visible in COB else 'N/A'",
