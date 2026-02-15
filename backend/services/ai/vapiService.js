@@ -1,41 +1,19 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleAIFileManager } = require("@google/generative-ai/server");
 const path = require('path');
 const fs = require('fs');
-const { exec } = require('child_process');
-
-// Helper to convert Video -> Audio (MP3) using system FFmpeg
-const extractAudio = (videoPath) => {
-    return new Promise((resolve, reject) => {
-        const audioPath = videoPath.replace(path.extname(videoPath), '.mp3');
-        console.log(`Extracting Audio: ${videoPath} -> ${audioPath}`);
-
-        // ffmpeg -i input.mp4 -vn -ar 16000 -ac 1 -b:a 32k output.mp3 (Optimized for Speech Text)
-        const command = `ffmpeg -y -i "${videoPath}" -vn -ar 16000 -ac 1 -b:a 32k "${audioPath}"`;
-
-        exec(command, (error, stdout, stderr) => {
-            if (error) {
-                console.error("FFmpeg Error:", stderr);
-                reject(error);
-            } else {
-                console.log("Audio Extraction Complete.");
-                resolve(audioPath);
-            }
-        });
-    });
-};
 
 const processAudio = async (videoUrl) => {
-    console.log("-> VapiService (FFmpeg + Gemini): Processing...", videoUrl);
+    //console.log("-> VapiService (Gemini File API): Processing...", videoUrl);
 
     if (!process.env.GEMINI_API_KEY) {
-        console.warn("GEMINI_API_KEY is missing. Returning mock data.");
-        return { transcription: "Mock Transcription due to missing key.", sentiment: "Neutral" };
+        return { transcription: "Mock Transcription (No Key)", sentiment: "Neutral" };
     }
 
     try {
         const apiKey = process.env.GEMINI_API_KEY.trim();
+        const fileManager = new GoogleAIFileManager(apiKey);
         const genAI = new GoogleGenerativeAI(apiKey);
-        // Using Gemini 2.5 Flash - confirmed available and efficient
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         // Resolve absolute path
@@ -46,40 +24,43 @@ const processAudio = async (videoUrl) => {
             throw new Error(`File not found at ${absolutePath}`);
         }
 
-        // 1. Convert Video to Audio (MP3) to drastically reduce size and avoid "File API" issues
-        let audioPath;
-        try {
-            audioPath = await extractAudio(absolutePath);
-        } catch (ffmpegErr) {
-            console.warn("FFmpeg failed, falling back to original video file:", ffmpegErr.message);
-            audioPath = absolutePath; // Fallback to sending the video directly if ffmpeg fails
+        // 1. Upload File to Gemini
+        //console.log("Uploading file to Gemini...");
+        const uploadResult = await fileManager.uploadFile(absolutePath, {
+            mimeType: "video/mp4",
+            displayName: "Lecture Video",
+        });
+        const fileUri = uploadResult.file.uri;
+        //console.log(`File Uploaded: ${fileUri}`);
+
+        // 2. Wait for processing (File API requirement)
+        let file = await fileManager.getFile(uploadResult.file.name);
+        while (file.state === "PROCESSING") {
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            //console.log("Processing video...");
+            await sleep(2000); // Wait 2s
+            file = await fileManager.getFile(uploadResult.file.name);
         }
 
-        // 2. Read file (Audio or Video)
-        const fileBuffer = fs.readFileSync(audioPath);
-        const base64Data = fileBuffer.toString('base64');
-        const mimeType = audioPath.endsWith('.mp3') ? "audio/mp3" : "video/mp4";
+        if (file.state === "FAILED") {
+            throw new Error("Video processing failed by Gemini.");
+        }
 
-        console.log(`Sending Inline Data to Gemini (${mimeType}, ${fileBuffer.length} bytes)...`);
+        //console.log("Video Active. Generating Transcription...");
 
-        // 3. Generate Transcription
+        // 3. Generate Content using File URI
         const result = await model.generateContent([
             {
-                inlineData: {
-                    mimeType: mimeType,
-                    data: base64Data
+                fileData: {
+                    mimeType: file.mimeType,
+                    fileUri: fileUri
                 }
             },
-            { text: "Generate a verbatim transcription of the speech in this file." }
+            { text: "Generate a verbatim transcription of the speech." }
         ]);
 
-        // Cleanup generated mp3
-        if (audioPath !== absolutePath && fs.existsSync(audioPath)) {
-            fs.unlinkSync(audioPath);
-        }
-
         const transcription = result.response.text();
-        console.log("Transcription Generated (Length):", transcription.length);
+        //console.log("Transcription Generated (Length):", transcription.length);
 
         return {
             transcription: transcription,
@@ -87,8 +68,8 @@ const processAudio = async (videoUrl) => {
         };
 
     } catch (error) {
-        console.error("Vapi (Gemini Audio) Error:", error);
-        return { transcription: "Error generating transcription: " + error.message, sentiment: "Error" };
+        console.error("Vapi (Gemini FileAPI) Error:", error);
+        return { transcription: "Error: " + error.message, sentiment: "Error" };
     }
 };
 

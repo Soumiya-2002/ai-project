@@ -22,7 +22,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Request Logger
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    //console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
     next();
 });
 
@@ -45,7 +45,7 @@ const startServer = async () => {
     await syncDatabase();
 
     app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+        //console.log(`Server running on port ${PORT}`);
     });
 };
 

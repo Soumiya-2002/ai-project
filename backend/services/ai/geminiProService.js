@@ -41,10 +41,10 @@ class GeminiProService {
                 // Test with a simple prompt
                 const result = await model.generateContent('Hello');
                 await result.response;
-                console.log(`✅ Using model: ${modelName}`);
+                //console.log(`✅ Using model: ${modelName}`);
                 return model;
             } catch (error) {
-                console.log(`❌ Model ${modelName} not available`);
+                //console.log(`❌ Model ${modelName} not available`);
                 continue;
             }
         }

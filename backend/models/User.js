@@ -27,18 +27,18 @@ const User = sequelize.define('User', {
     role_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-            model: Role,
-            key: 'id'
-        }
+        // references: {
+        //     model: Role,
+        //     key: 'id'
+        // }
     },
     school_id: {
         type: DataTypes.INTEGER,
         allowNull: true, // Optional - only for school_admin and teacher
-        references: {
-            model: 'Schools',
-            key: 'id'
-        }
+        // references: {
+        //     model: 'Schools',
+        //     key: 'id'
+        // }
     }
 }, {
     timestamps: true,

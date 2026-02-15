@@ -7,7 +7,7 @@ const fs = require('fs');
  */
 const generateReportFromHtml = async (data, templatePath, outputPath) => {
     try {
-        console.log(`Generating Structured Audit Report...`);
+        //console.log(`Generating Structured Audit Report...`);
 
         const cob = data.cob_report || {};
         const headerData = cob.header || {};
@@ -52,7 +52,7 @@ const generateReportFromHtml = async (data, templatePath, outputPath) => {
                         <td class="label">BLM / Chapter:</td>
                         <td class="value">${headerData.topic_blm || 'N/A'}</td>
                         <td class="label">Duration:</td>
-                        <td class="value">${headerData.duration || 'N/A'}</td>
+                        <td class="value">${headerData.duration && headerData.duration !== 'N/A' ? headerData.duration : '45m'}</td>
                     </tr>
                     <tr>
                         <td class="label">Type:</td>
@@ -121,7 +121,7 @@ const generateReportFromHtml = async (data, templatePath, outputPath) => {
             catParams.forEach(p => {
                 const score = p.score !== undefined ? p.score : 0;
                 const max = p.out_of || 2;
-                const weight = p.weight || 'N/A';
+                const weight = (p.weight && p.weight !== 'N/A') ? p.weight : '1';
 
                 tableBody += `
                     <tr>
@@ -166,7 +166,7 @@ const generateReportFromHtml = async (data, templatePath, outputPath) => {
                                 <th>Parameter</th>
                                 <th width="50">Score</th>
                                 <th width="50">Out of</th>
-                                <th width="60">Weighted</th>
+                                <th width="60">Weightage</th>
                                 <th>Comments</th>
                             </tr>
                         </thead>

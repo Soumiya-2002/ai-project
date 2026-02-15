@@ -57,7 +57,7 @@ const uploadAndAnalyze = async (req, res) => {
             // 1. Analyze COB Parameters
             if (req.files && req.files.cobParams) {
                 const cobFile = req.files.cobParams[0];
-                console.log('📄 Analyzing COB Parameters:', cobFile.originalname);
+                //console.log('📄 Analyzing COB Parameters:', cobFile.originalname);
 
                 const ext = path.extname(cobFile.path).toLowerCase();
                 if (ext === '.pdf') {
@@ -71,13 +71,13 @@ const uploadAndAnalyze = async (req, res) => {
                         'cob_params'
                     );
                 }
-                console.log('✅ COB Parameters analyzed');
+                //console.log('✅ COB Parameters analyzed');
             }
 
             // 2. Analyze Reading Material
             if (req.files && req.files.readingMaterial) {
                 const readingFile = req.files.readingMaterial[0];
-                console.log('📚 Analyzing Reading Material:', readingFile.originalname);
+                //console.log('📚 Analyzing Reading Material:', readingFile.originalname);
 
                 const ext = path.extname(readingFile.path).toLowerCase();
                 if (ext === '.pdf') {
@@ -91,13 +91,13 @@ const uploadAndAnalyze = async (req, res) => {
                         'reading_material'
                     );
                 }
-                console.log('✅ Reading Material analyzed');
+                //console.log('✅ Reading Material analyzed');
             }
 
             // 3. Analyze Lesson Plan
             if (req.files && req.files.lessonPlan) {
                 const lessonFile = req.files.lessonPlan[0];
-                console.log('📋 Analyzing Lesson Plan:', lessonFile.originalname);
+                //console.log('📋 Analyzing Lesson Plan:', lessonFile.originalname);
 
                 const ext = path.extname(lessonFile.path).toLowerCase();
                 if (ext === '.pdf') {
@@ -111,13 +111,13 @@ const uploadAndAnalyze = async (req, res) => {
                         'lesson_plan'
                     );
                 }
-                console.log('✅ Lesson Plan analyzed');
+                //console.log('✅ Lesson Plan analyzed');
             }
 
             // 4. Analyze Video (if provided)
             if (req.files && req.files.video) {
                 const videoFile = req.files.video[0];
-                console.log('🎥 Analyzing Video:', videoFile.originalname);
+                //console.log('🎥 Analyzing Video:', videoFile.originalname);
 
                 // Prepare context from analyzed documents
                 const context = {
@@ -130,7 +130,7 @@ const uploadAndAnalyze = async (req, res) => {
                     videoFile.path,
                     context
                 );
-                console.log('✅ Video analyzed');
+                //console.log('✅ Video analyzed');
 
                 // Save lecture to database
                 const { teacher_id, date, lecture_number, lecture_id } = req.body;
@@ -155,7 +155,7 @@ const uploadAndAnalyze = async (req, res) => {
 
                 // Generate comprehensive COB report
                 if (lecture && analysisResults.cobParams) {
-                    console.log('📊 Generating COB Report...');
+                    //console.log('📊 Generating COB Report...');
                     const cobReport = await geminiProService.generateCOBReport(
                         analysisResults.video.data,
                         analysisResults.cobParams.data,
@@ -177,7 +177,7 @@ const uploadAndAnalyze = async (req, res) => {
                         score: calculateScore(cobReport.report),
                         generated_by_ai: true
                     });
-                    console.log('✅ COB Report saved to database');
+                    //console.log('✅ COB Report saved to database');
                 }
             }
 

@@ -98,7 +98,52 @@ const getLectures = async (req, res) => {
     }
 };
 
+const getLectureById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { Report } = require('../models');
+
+        const lecture = await Lecture.findByPk(id, {
+            include: [
+                {
+                    model: User,
+                    as: 'Teacher',
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: Class,
+                    attributes: ['name', 'section']
+                },
+                {
+                    model: Report, // Include the report to check if it exists
+                    attributes: ['id', 'generated_by_ai']
+                }
+            ]
+        });
+
+        if (!lecture) {
+            return res.status(404).json({ message: 'Lecture not found' });
+        }
+
+        // Construct PDF URL if report exists
+        let pdfReportUrl = null;
+        if (lecture.status === 'completed') {
+            pdfReportUrl = `/uploads/report-${lecture.id}.pdf`;
+        }
+
+        res.json({
+            ...lecture.toJSON(),
+            pdfReportUrl
+        });
+
+    } catch (err) {
+        console.error("Error fetching lecture:", err);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
 module.exports = {
     scheduleLecture,
-    getLectures
+    getLectures,
+    getLectureById
 };

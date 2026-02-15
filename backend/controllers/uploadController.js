@@ -70,13 +70,13 @@ const extractText = async (file) => {
 
 const uploadVideo = async (req, res) => {
     upload(req, res, async (err) => {
-        console.log("--> Upload Controller Hit");
+        //console.log("--> Upload Controller Hit");
         if (err) {
             console.error("Multer Error:", err);
             return res.status(400).json({ message: err });
         } else {
-            console.log("Files:", req.files ? Object.keys(req.files) : "None");
-            console.log("Body:", req.body);
+            //console.log("Files:", req.files ? Object.keys(req.files) : "None");
+            //console.log("Body:", req.body);
 
             // Check if video exists
             if (!req.files || !req.files.video) {
@@ -85,7 +85,7 @@ const uploadVideo = async (req, res) => {
             }
 
             const videoFile = req.files.video[0];
-            console.log("Video uploaded:", videoFile.filename);
+            //console.log("Video uploaded:", videoFile.filename);
 
             try {
                 // Extract text from auxiliary files
@@ -97,7 +97,7 @@ const uploadVideo = async (req, res) => {
                 let lecture;
 
                 if (lecture_id) {
-                    console.log("Updating existing lecture:", lecture_id);
+                    //console.log("Updating existing lecture:", lecture_id);
                     lecture = await Lecture.findByPk(lecture_id);
                     if (lecture) {
                         lecture.video_url = `/uploads/${videoFile.filename}`;
@@ -108,7 +108,7 @@ const uploadVideo = async (req, res) => {
                         await lecture.save();
                     }
                 } else if (teacher_id && date) {
-                    console.log("Creating new lecture for teacher:", teacher_id, "on", date);
+                    //console.log("Creating new lecture for teacher:", teacher_id, "on", date);
                     // teacher_id is now User ID directly (no Teacher table needed)
                     lecture = await Lecture.create({
                         teacher_id, // User ID from Users table
@@ -127,114 +127,112 @@ const uploadVideo = async (req, res) => {
                     console.warn("Lecture object is null/undefined. Skipping AI Analysis.");
                 }
 
-                let analysisResult = null;
-                let pdfReportUrl = null;
+                // --- ASYNC PROCESSING CHANGE ---
+                // Return immediate response to User so they don't wait 3-4 minutes
+                res.status(202).json({
+                    message: 'Upload Successful! AI Analysis started in background.',
+                    file: `/uploads/${videoFile.filename}`,
+                    lecture: lecture,
+                    status: 'processing',
+                    lecture_id: lecture.id
+                });
 
                 if (lecture) {
-                    const AiService = require('../services/AiService');
+                    // Update Status to Processing
+                    lecture.status = 'processing';
+                    await lecture.save();
 
-                    // Fetch Rich Metadata for AI Context
-                    const { User, School, Class } = require('../models');
-                    let contextMeta = {
-                        facilitator: 'Unknown Teacher',
-                        school: 'Unknown School',
-                        grade: lecture.grade || 'N/A', // Prioritize manual entry
-                        section: lecture.section || 'N/A', // Prioritize manual entry
-                        subject: 'General',
-                        date: lecture.date || new Date().toISOString().split('T')[0]
-                    };
+                    // Start Background Process (Fire & Forget)
+                    (async () => {
+                        //console.log(`[Background] Starting AI Analysis for Lecture ${lecture.id}...`);
+                        try {
+                            const AiService = require('../services/AiService');
+                            const { User, School, Class } = require('../models');
 
-                    try {
-                        const fullLecture = await Lecture.findByPk(lecture.id, {
-                            include: [
-                                {
-                                    model: User,
-                                    as: 'Teacher',
-                                    include: [{ model: School }] // User -> School
-                                },
-                                {
-                                    model: Class,
-                                    include: [{ model: School }] // Class -> School
-                                }
-                            ]
-                        });
+                            // Fetch Rich Metadata for AI Context
+                            let contextMeta = {
+                                facilitator: 'Unknown Teacher',
+                                school: 'Unknown School',
+                                grade: lecture.grade || req.body.grade || 'N/A',
+                                section: lecture.section || req.body.section || 'N/A',
+                                subject: 'General',
+                                date: lecture.date || new Date().toISOString().split('T')[0]
+                            };
 
-                        if (fullLecture) {
-                            if (fullLecture.Teacher) {
-                                contextMeta.facilitator = fullLecture.Teacher.name;
-                                // Try getting school from Teacher's User profile
-                                if (fullLecture.Teacher.School) {
-                                    contextMeta.school = fullLecture.Teacher.School.name;
-                                }
-                            }
-
-                            if (fullLecture.Class) {
-                                // Only override if not already set by explicit input
-                                if (contextMeta.grade === 'N/A') contextMeta.grade = fullLecture.Class.name;
-                                if (contextMeta.section === 'N/A') contextMeta.section = fullLecture.Class.section;
-
-                                // If school wasn't found on teacher, try class
-                                if (!contextMeta.school && fullLecture.Class.School) {
-                                    contextMeta.school = fullLecture.Class.School.name;
-                                }
-                            }
-                        }
-                    } catch (metaErr) {
-                        console.warn("Failed to fetch rich metadata for AI:", metaErr.message);
-                    }
-
-                    // Pass the extra context texts to the AI Service
-                    console.log("Starting AI Analysis (Blocking)...");
-                    try {
-                        analysisResult = await AiService.analyzeVideo(lecture.video_url, lecture.id, {
-                            cobParams: cobText,
-                            readingMaterial: readingText,
-                            lessonPlan: lessonText,
-                            meta: contextMeta
-                        });
-
-                        // --- GENERATE PDF REPORT ---
-                        if (analysisResult && !analysisResult.error) {
                             try {
-                                const htmlTemplatePath = path.join(__dirname, '../content/COB Template - K1 to Gr 10.html');
+                                const fullLecture = await Lecture.findByPk(lecture.id, {
+                                    include: [
+                                        {
+                                            model: User,
+                                            as: 'Teacher',
+                                            include: [{ model: School }]
+                                        },
+                                        {
+                                            model: Class,
+                                            include: [{ model: School }]
+                                        }
+                                    ]
+                                });
 
-                                // Check if the template exists
-                                if (fs.existsSync(htmlTemplatePath)) {
-                                    const { generateReportFromHtml } = require('../services/htmlReportService');
+                                if (fullLecture) {
+                                    if (fullLecture.Teacher) {
+                                        contextMeta.facilitator = fullLecture.Teacher.name;
+                                        if (fullLecture.Teacher.School) contextMeta.school = fullLecture.Teacher.School.name;
+                                    }
+                                    if (fullLecture.Class) {
+                                        if (contextMeta.grade === 'N/A') contextMeta.grade = fullLecture.Class.name;
+                                        if (contextMeta.section === 'N/A') contextMeta.section = fullLecture.Class.section;
+                                        if (!contextMeta.school && fullLecture.Class.School) {
+                                            contextMeta.school = fullLecture.Class.School.name;
+                                        }
+                                    }
+                                }
+                            } catch (metaErr) {
+                                console.warn("[Background] Failed to fetch rich metadata:", metaErr.message);
+                            }
+
+                            // Run AI Analysis
+                            //console.log("[Background] Calling AI Service (This takes time)...");
+                            const analysisResult = await AiService.analyzeVideo(lecture.video_url, lecture.id, {
+                                cobParams: cobText,
+                                readingMaterial: readingText,
+                                lessonPlan: lessonText,
+                                meta: contextMeta
+                            });
+
+                            // Generate PDF Report
+                            if (analysisResult && !analysisResult.error) {
+                                try {
+                                    const htmlTemplatePath = path.join(__dirname, '../content/COB Template - K1 to Gr 10.html');
                                     // Use a simpler filename
                                     const reportFilename = `report-${lecture.id}.pdf`;
                                     const reportPath = path.join(__dirname, '../uploads', reportFilename);
 
-                                    await generateReportFromHtml(analysisResult, htmlTemplatePath, reportPath);
-                                    pdfReportUrl = `/uploads/${reportFilename}`;
-                                } else {
-                                    const { generatePDF } = require('../services/pdfService');
-                                    const reportFilename = `report-${lecture.id}.pdf`;
-                                    const reportPath = path.join(__dirname, '../uploads', reportFilename);
-
-                                    await generatePDF(analysisResult, reportPath);
-                                    pdfReportUrl = `/uploads/${reportFilename}`;
+                                    if (fs.existsSync(htmlTemplatePath)) {
+                                        const { generateReportFromHtml } = require('../services/htmlReportService');
+                                        await generateReportFromHtml(analysisResult, htmlTemplatePath, reportPath);
+                                    } else {
+                                        const { generatePDF } = require('../services/pdfService');
+                                        await generatePDF(analysisResult, reportPath);
+                                    }
+                                    //console.log("[Background] PDF Report Generated Successfully:", reportFilename);
+                                } catch (pdfErr) {
+                                    console.error("[Background] PDF Generation Failed:", pdfErr);
                                 }
-                                console.log("PDF Report Generated:", pdfReportUrl);
-                            } catch (pdfErr) {
-                                console.error("PDF Generation Failed:", pdfErr);
                             }
+
+                            // Mark as Completed
+                            lecture.status = 'completed';
+                            await lecture.save();
+                            //console.log(`[Background] Lecture ${lecture.id} processing FINISHED.`);
+
+                        } catch (aiErr) {
+                            console.error("[Background] AI Service Error:", aiErr);
+                            lecture.status = 'failed';
+                            await lecture.save();
                         }
-
-                    } catch (aiErr) {
-                        console.error("AI Service Error:", aiErr);
-                        // Continue to return success for upload even if AI fails, but include error info
-                        analysisResult = { error: "AI Analysis Failed", details: aiErr.message };
-                    }
+                    })();
                 }
-
-                res.json({
-                    message: 'Upload & Analysis Completed!',
-                    file: `/uploads/${videoFile.filename}`,
-                    lecture,
-                    analysis: analysisResult,
-                    pdfReport: pdfReportUrl
-                });
 
             } catch (dbErr) {
                 console.error("DB Error:", dbErr);

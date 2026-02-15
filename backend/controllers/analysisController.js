@@ -93,7 +93,7 @@ const downloadReport = async (req, res) => {
 
         // If file exists AND we don't need to patch, serve it fast
         if (fs.existsSync(existingReportPath) && !needsPatching) {
-            console.log(`Serving existing report for ID ${lecture_id}`);
+            //console.log(`Serving existing report for ID ${lecture_id}`);
             return res.download(existingReportPath, `Report-${lecture_id}.pdf`);
         }
 
@@ -105,7 +105,7 @@ const downloadReport = async (req, res) => {
         const tempPath = path.join(tempDir, `report-${lecture_id}.pdf`);
 
         if (needsPatching) {
-            console.log(`Patching metadata for Report ID ${lecture_id}...`);
+            //console.log(`Patching metadata for Report ID ${lecture_id}...`);
             try {
                 // Fetch details
                 const lecture = await Lecture.findByPk(lecture_id, {
@@ -155,7 +155,7 @@ const downloadReport = async (req, res) => {
         }
 
         // Generate PDF using Puppeteer (HTML Service)
-        console.log(`Generating PDF for ID ${lecture_id}...`);
+        //console.log(`Generating PDF for ID ${lecture_id}...`);
         await generateReportFromHtml(analysisData, null, tempPath);
 
         // Send to user

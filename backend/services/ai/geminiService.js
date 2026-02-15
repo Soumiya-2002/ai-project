@@ -32,7 +32,7 @@ const getMockData = () => {
 };
 
 const generateAnalysis = async (textInput, meta = {}) => {
-    console.log("Calling Gemini API for Detailed Report...", meta);
+    //console.log("Calling Gemini API for Detailed Report...", meta);
 
     if (!process.env.GEMINI_API_KEY) {
         console.warn("GEMINI_API_KEY is missing. Returning mock COB Report.");
@@ -44,6 +44,7 @@ const generateAnalysis = async (textInput, meta = {}) => {
         "gemini-2.0-flash",
         "gemini-flash-latest",
         "gemini-1.5-flash",
+        "gemini-1.5-flash-8b",
         "gemini-pro"
     ];
 
@@ -51,40 +52,38 @@ const generateAnalysis = async (textInput, meta = {}) => {
 
     // Construct Prompt with specific metadata instructions
     const prompt = `
-        You are an elite Educational Auditor. Your job is to evaluate a classroom lecture video against a STRICT Rubric (COB).
+        You are an elite Educational Auditor. Your job is to evaluate a classroom lecture video transcription based STRICTLY on the User Provided Rubric / Instructions below.
         
-        **METADATA CONTEXT (Use these exact values in the header):**
+        **METADATA CONTEXT:**
         - Teacher Name: ${meta.facilitator || "Identify from transcript"}
         - School: ${meta.school || "Identify from transcript"}
         - Grade: ${meta.grade || "Identify"}
-        - Section: ${meta.section || "Identify"}
         - Subject: ${meta.subject || "Identify"}
         - Date: ${meta.date || "Today"}
 
-        **INPUTS PROVIDED BELOW:**
+        **INPUTS:**
         ${textInput}
-
-        ---
-        **CRITICAL INSTRUCTION: STRICT RUBRIC ADHERENCE**
-        1. **Identify the Rubric**: Locate the section labeled 'COB Parameters (Parsed)' in the input. 
-           - Look for headers like "Components", "Parameters", "Aspects", or "Indicators".
-           - Identified Categories become the 'category' field in output.
-           - All items under a category are the parameters.
-        2. **Extract ALL Parameters**: You must generate a report that includes **EVERY SINGLE PARAMETER** mentioned in that COB text. 
-           - **DO NOT SKIP ANY**. 
-           - **DO NOT SUMMARIZE OR GROUP THEM YOURSELF**.
-           - If the COB text has 50 items, your output 'parameters' array MUST have 50 items.
-           - Use the exact text for the 'name' field.
-        3. **Scoring**: 
-           - Assign a score for *each* parameter based strictly on the transcription evidence.
-           - If a parameter relates to "Preparation", "Content Accuracy", "Lesson Flow", or "Resources", you **MUST** cross-reference with the provided **Lesson Plan** and **Reading Material**.
-           - If the teacher deviates from the plan or misinterprets the reading material, deduct points accordingly.
-           - **CRITICAL**: You MUST extract the exact 'Out of' (Max Score) and 'Weightage' for each parameter from the provided COB text.
-             - Look for text like "(2 marks)", "Weightage: 1.5", "Max: 5", or columns indicating scores.
-             - If the text says "Score: 1-5", then 'out_of' is 5.
-             - If no max score is explicitly stated for a specific parameter, look for a category-level default. Only assume 2 if absolutely no information is present.
-        4. **Evidence**: You MUST write a specific comment quoting the teacher or describing the moment that justifies the score. Mention if the Lesson Plan was followed or if Reading Material was used effectively.
         
+        ---
+        **CRITICAL INSTRUCTION: FOLLOW THE USER RUBRIC**
+        The "USER PROVIDED PROMPT / RUBRIC" section in the inputs above defines the specific criteria you must evaluate.
+        
+        1. **Identify Criteria**: Extract the specific parameters, questions, or criteria asked for in the user's prompt.
+           - If the prompt is a list of questions, each question is a parameter.
+           - If the prompt is a standard rubric table, each row is a parameter.
+           - **LOOK FOR MARKING SCHEME**: If the rubric mentions "Marks", "Weightage", or "Points" for each parameter, extract it.
+        2. **Evaluate & Score**:
+           - Assign a score for each identified parameter based ONLY on the transcription evidence.
+           - If the user prompt defines a specific scoring scale (e.g., 1-5, or Yes/No), USE IT.
+           - If no scale is defined, use a default 1-5 scale (1=Poor, 5=Excellent).
+        **CRITICAL INSTRUCTION: DATA COMPLETENESS**
+        - **Duration**: NEVER use "N/A". If the transcript doesn't state it, estimate it based on the word count (e.g., "45m") or use "45m" as a standard default.
+        - **Weight**: 
+            1. SCAN the User Provided Rubric for columns/text like "Weightage", "Weight", or "Percentage" next to each parameter.
+            2. If found, use that EXACT value (e.g., "20%", "5", "10 pts").
+            3. If NOT found, use default "1".
+            4. NEVER leave as "N/A".
+
         **OUTPUT FORMAT (JSON):**
         {
             "cob_report": {
@@ -96,25 +95,25 @@ const generateAnalysis = async (textInput, meta = {}) => {
                     "subject": "${meta.subject || "Subject"}",
                     "date": "${meta.date || "Date"}",
                     "topic_blm": "Topic from transcript",
-                    "duration": "Time from transcript",
+                    "duration": "45m",
                     "session_type": "Classroom"
                 },
                 "scores": {
                     "overall_percentage": "XX%",
-                    "summary": "Brief summary"
+                    "summary": "Brief executive summary of the observation."
                 },
                 "parameters": [
                     {
-                        "category": "Detected Category Name (e.g. 'Instructional Design')",
-                        "name": "EXACT PARAMETER TEXT",
+                        "category": "Category Name (e.g. 'General' or specific section from rubric)",
+                        "name": "Parameter Name / Question from Rubric",
                         "score": X,
                         "out_of": Y,
-                        "weight": "If visible in COB else 'N/A'",
+                        "weight": "1",
                         "comment": "Specific transcript evidence."
                     }
                 ],
-                "highlights": ["..."],
-                "other_observations": ["..."]
+                "highlights": ["Strength 1", "Strength 2"],
+                "other_observations": ["Improvement Area 1", "Improvement Area 2"]
             }
         }
     `;
@@ -122,7 +121,7 @@ const generateAnalysis = async (textInput, meta = {}) => {
     // Try each model until one works
     for (const modelName of validModels) {
         try {
-            console.log(`Attempting generation with model: ${modelName}...`);
+            //console.log(`Attempting generation with model: ${modelName}...`);
             const model = genAI.getGenerativeModel({
                 model: modelName,
                 generationConfig: { responseMimeType: "application/json" }
@@ -130,7 +129,7 @@ const generateAnalysis = async (textInput, meta = {}) => {
 
             const result = await model.generateContent(prompt);
             const responseText = result.response.text();
-            console.log(`✅ Success with ${modelName}. Parsing response...`);
+            //console.log(`✅ Success with ${modelName}. Parsing response...`);
 
             let cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
 

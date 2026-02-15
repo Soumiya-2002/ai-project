@@ -17,7 +17,7 @@ const AdminLayout = () => {
     const normalize = (r) => r.toLowerCase().replace(/[\s_]/g, '');
     const role = normalize(rawRole);
 
-    console.log("Raw Role:", session, "Normalized Role:", role);
+    //console.log("Raw Role:", session, "Normalized Role:", role);
 
     const getMenuItems = (currentRole) => {
         const items = [

@@ -2,7 +2,7 @@ const axios = require('axios');
 
 const generateRubricScore = async (analysisText) => {
     // Placeholder for NLM (Natural Language Model) Service
-    console.log("Calling NLM Service with:", analysisText);
+    // //console.log("Calling NLM Service with:", analysisText);
 
     if (!process.env.NLM_API_KEY) {
         console.warn("NLM_API_KEY is missing. Returning mock data.");

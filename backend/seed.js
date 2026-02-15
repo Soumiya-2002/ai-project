@@ -6,10 +6,10 @@ dotenv.config();
 
 const seed = async () => {
     try {
-        console.log('Connecting to database...');
+        //console.log('Connecting to database...');
         await sequelize.authenticate();
 
-        console.log('Recreating tables...');
+        //console.log('Recreating tables...');
         await sequelize.sync({ force: true }); // DEV ONLY ✅
 
         // 1. Seed Roles
@@ -20,7 +20,7 @@ const seed = async () => {
             const role = await Role.create({ name: roleName });
             roleMap[roleName] = role.id;
         }
-        console.log('Roles seeded.');
+        //console.log('Roles seeded.');
 
         // 2. Seed Super Admin
         const passwordHash = await bcrypt.hash('123456', 10);
@@ -31,7 +31,7 @@ const seed = async () => {
             password: passwordHash,
             role_id: roleMap.super_admin
         });
-        console.log('Super Admin created: admin@school.com / 123456');
+        //console.log('Super Admin created: admin@school.com / 123456');
 
         // 3. Seed School
         const school = await School.create({
@@ -40,7 +40,7 @@ const seed = async () => {
             contact_number: '555-0100',
             email: 'info@springfield.edu'
         });
-        console.log('School created: Springfield High');
+        //console.log('School created: Springfield High');
 
         // 4. Seed School Admin
         // Note: In our strict schema, we might need a link, but User model doesn't strictly enforce school_id yet 
@@ -56,7 +56,7 @@ const seed = async () => {
         });
         // If we had a SchoolAdmin table, we'd link it here. For now, we just have the User.
         // We can manually add a property if our User model supported it, but let's stick to the RBAC.
-        console.log('School Admin created: principal@school.com / 123456');
+        //console.log('School Admin created: principal@school.com / 123456');
 
         // 5. Seed Teacher
         const teacherUser = await User.create({
@@ -71,7 +71,7 @@ const seed = async () => {
             school_id: school.id,
             subjects: JSON.stringify(['Math', 'History'])
         });
-        console.log('Teacher created: teacher@school.com / 123456');
+        //console.log('Teacher created: teacher@school.com / 123456');
 
         process.exit(0);
     } catch (error) {

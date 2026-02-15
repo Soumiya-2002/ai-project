@@ -49,7 +49,7 @@ const Lecture = sequelize.define('Lecture', {
         allowNull: true // Store "A", "B", "Rose", etc.
     },
     status: {
-        type: DataTypes.ENUM('scheduled', 'completed', 'cancelled'),
+        type: DataTypes.ENUM('scheduled', 'completed', 'cancelled', 'processing', 'failed'),
         defaultValue: 'scheduled'
     }
 }, {
