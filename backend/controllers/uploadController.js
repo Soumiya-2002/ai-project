@@ -144,7 +144,7 @@ const uploadVideo = async (req, res) => {
 
                     // Start Background Process (Fire & Forget)
                     (async () => {
-                        //console.log(`[Background] Starting AI Analysis for Lecture ${lecture.id}...`);
+                        console.log(`[Background] Starting AI Analysis for Lecture ${lecture.id}...`);
                         try {
                             const AiService = require('../services/AiService');
                             const { User, School, Class } = require('../models');
@@ -192,7 +192,7 @@ const uploadVideo = async (req, res) => {
                             }
 
                             // Run AI Analysis
-                            //console.log("[Background] Calling AI Service (This takes time)...");
+                            console.log("[Background] Calling AI Service (This takes time)...");
                             const analysisResult = await AiService.analyzeVideo(lecture.video_url, lecture.id, {
                                 cobParams: cobText,
                                 readingMaterial: readingText,
@@ -215,7 +215,7 @@ const uploadVideo = async (req, res) => {
                                         const { generatePDF } = require('../services/pdfService');
                                         await generatePDF(analysisResult, reportPath);
                                     }
-                                    //console.log("[Background] PDF Report Generated Successfully:", reportFilename);
+                                    console.log("[Background] PDF Report Generated Successfully:", reportFilename);
                                 } catch (pdfErr) {
                                     console.error("[Background] PDF Generation Failed:", pdfErr);
                                 }
@@ -224,7 +224,7 @@ const uploadVideo = async (req, res) => {
                             // Mark as Completed
                             lecture.status = 'completed';
                             await lecture.save();
-                            //console.log(`[Background] Lecture ${lecture.id} processing FINISHED.`);
+                            console.log(`[Background] Lecture ${lecture.id} processing FINISHED.`);
 
                         } catch (aiErr) {
                             console.error("[Background] AI Service Error:", aiErr);

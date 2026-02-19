@@ -9,13 +9,41 @@ class AiService {
 
         const { cobParams, readingMaterial, lessonPlan } = context;
 
+        const DEFAULT_RUBRIC = `
+        **Standard K12 Classroom Observation Rubric**
+        
+        **Category: Concepts (Weight: 50%)**
+        1. **Concepts & Explanation**: (Max Score: 2)
+           - Criteria: Teacher must handle concepts accurately without errors. Explanations should be clear, detailed, and age-appropriate.
+        2. **Rectification - Concepts**: (Max Score: 2)
+           - Criteria: Teacher must identify and correctly rectify any student misconceptions or errors immediately.
+
+        **Category: Delivery (Weight: 20%)**
+        3. **Subject Language**: (Max Score: 2)
+           - Criteria: Teacher should use correct subject-specific terminology and clear language.
+        4. **Communication & Pace**: (Max Score: 2)
+           - Criteria: Voice should be audible, modulated, and the pace should allow students to follow.
+
+        **Category: Facilitator-Student (Weight: 15%)**
+        5. **Interaction & Engagement**: (Max Score: 2)
+           - Criteria: Teacher should ask questions, encourage participation, and ensure a two-way learning process.
+
+        **Category: Classroom Management (Weight: 15%)**
+        6. **Time Management & Discipline**: (Max Score: 2)
+           - Criteria: Session should flow broadly according to plan, maintaining student discipline and focus.
+        `;
+
+        const usedRubric = cobParams && cobParams.trim().length > 10 ? cobParams : DEFAULT_RUBRIC;
+
+        console.log("Using Rubric:", usedRubric.substring(0, 100) + "...");
+
         const SOP_PROMPT = `
         **SOP for generating COB reports using AI – Gemini 1.5 Pro**
         **Role**: Auditor/Observer.
         **Task**: Analyze the video transcription and evaluate it according to the specific instructions below.
         
         **CRITICAL INPUT: USER PROVIDED PROMPT / RUBRIC**
-        """${cobParams || "Evaluate based on standard K12 teaching best practices."}"""
+        """${usedRubric}"""
 
         **Supporting Materials**:
         1. Reading Material (if any): """${readingMaterial || "N/A"}"""
@@ -32,25 +60,25 @@ class AiService {
 
         try {
             // 1. Vapi: Audio Processing & Transcription
-            //console.log("-> Step 1: Vapi Audio Analysis Started...");
+            console.log("-> Step 1: Vapi Audio Analysis Started...");
             const vapiResult = await vapiService.processAudio(fileUrl);
-            //console.log("   Step 1 Complete: Vapi Transcription Received.");
+            console.log("   Step 1 Complete: Vapi Transcription Received.", vapiResult);
             const transcription = vapiResult.transcription || "No transcription available.";
 
             // 2. NLM: Rubric & Engagement Scoring (uses transcription)
-            //console.log("-> Step 2: NLM Rubric Scoring Started...");
+            console.log("-> Step 2: NLM Rubric Scoring Started...");
             const nlmResult = await nlmService.generateRubricScore(transcription);
-            //console.log("   Step 2 Complete: NLM Scoring Generated.");
+            console.log("   Step 2 Complete: NLM Scoring Generated.");
 
             // 3. Gemini: COB Reporting (uses transcription + context)
-            //console.log("-> Step 3: Gemini COB Analysis Started...");
+            console.log("-> Step 3: Gemini COB Analysis Started...");
 
             // Pass the FULL Prompt including the parsed content, AND the meta context
             const geminiResult = await geminiService.generateAnalysis(
-                `Transcription: ${transcription}\n\n${SOP_PROMPT}`,
+                `Transcription: ${transcription} \n\n${SOP_PROMPT} `,
                 context.meta // Pass the metadata object
             );
-            //console.log("   Step 3 Complete: Gemini Analysis Finished.");
+            console.log("   Step 3 Complete: Gemini Analysis Finished.");
 
             // 4. Aggregate & Save
             const finalReport = {
@@ -75,7 +103,7 @@ class AiService {
                 generated_by_ai: true
             });
 
-            //console.log(`AI Pipeline Success.Report Saved.`);
+            console.log(`AI Pipeline Success.Report Saved.`);
             return finalReport;
 
         } catch (error) {

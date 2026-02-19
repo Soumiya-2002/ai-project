@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import './VideoUpload.css';
 
 const VideoUpload = () => {
     const navigate = useNavigate();
@@ -351,24 +352,6 @@ const VideoUpload = () => {
                                     ))}
                                 </select>
                             </div>
-                            {/* Option 2: Text Area (Main Field) */}
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.95rem', fontWeight: '500', color: '#334155' }}>
-                                    AI Prompt / Instructions
-                                    <span style={{ marginLeft: '8px', fontSize: '0.8rem', color: '#64748b', fontWeight: '400' }}>
-                                        *This text acts as the strict prompt for the AI analysis.
-                                    </span>
-                                </label>
-                                <textarea
-                                    placeholder="Enter the specific AI Prompt or Rubric instructions here..."
-                                    value={rubricText}
-                                    onChange={(e) => setRubricText(e.target.value)}
-                                    disabled={!selectedTeacher}
-                                    rows="8" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
-                                    required
-                                />
-                            </div>
-
                             {/* New Grade & Section Fields */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Grade / Class</label>
@@ -391,6 +374,24 @@ const VideoUpload = () => {
                                     onChange={(e) => setSection(e.target.value)}
                                     disabled={!selectedTeacher}
                                     style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                                    required
+                                />
+                            </div>
+
+                            {/* Option 2: Text Area (Main Field) */}
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.95rem', fontWeight: '500', color: '#334155' }}>
+                                    AI Prompt / Instructions
+                                    <span style={{ marginLeft: '8px', fontSize: '0.8rem', color: '#64748b', fontWeight: '400' }}>
+                                        *This text acts as the strict prompt for the AI analysis.
+                                    </span>
+                                </label>
+                                <textarea
+                                    placeholder="Enter the specific AI Prompt or Rubric instructions here..."
+                                    value={rubricText}
+                                    onChange={(e) => setRubricText(e.target.value)}
+                                    disabled={!selectedTeacher}
+                                    rows="8" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
                                     required
                                 />
                             </div>

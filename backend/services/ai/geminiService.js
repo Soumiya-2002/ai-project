@@ -32,7 +32,7 @@ const getMockData = () => {
 };
 
 const generateAnalysis = async (textInput, meta = {}) => {
-    //console.log("Calling Gemini API for Detailed Report...", meta);
+    console.log("Calling Gemini API for Detailed Report...", meta);
 
     if (!process.env.GEMINI_API_KEY) {
         console.warn("GEMINI_API_KEY is missing. Returning mock COB Report.");
@@ -40,9 +40,9 @@ const generateAnalysis = async (textInput, meta = {}) => {
     }
 
     const validModels = [
+        "gemini-flash-latest",
         "gemini-2.5-flash",
         "gemini-2.0-flash",
-        "gemini-flash-latest",
         "gemini-1.5-flash",
         "gemini-1.5-flash-8b",
         "gemini-pro"
@@ -121,7 +121,7 @@ const generateAnalysis = async (textInput, meta = {}) => {
     // Try each model until one works
     for (const modelName of validModels) {
         try {
-            //console.log(`Attempting generation with model: ${modelName}...`);
+            console.log(`Attempting generation with model: ${modelName}...`);
             const model = genAI.getGenerativeModel({
                 model: modelName,
                 generationConfig: { responseMimeType: "application/json" }
@@ -129,7 +129,7 @@ const generateAnalysis = async (textInput, meta = {}) => {
 
             const result = await model.generateContent(prompt);
             const responseText = result.response.text();
-            //console.log(`✅ Success with ${modelName}. Parsing response...`);
+            console.log(`✅ Success with ${modelName}. Parsing response...`);
 
             let cleanText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
 

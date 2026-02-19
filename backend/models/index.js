@@ -11,8 +11,10 @@ const Rubric = require('./Rubric');
 const syncDatabase = async (retries = 3) => {
     try {
         await sequelize.authenticate();
-        await sequelize.sync({ alter: true });
-        //console.log('Database & tables synced with alterations!');
+        // Changing alter: true to false to prevent 'UnknownConstraintError' 
+        // when Sequelize tries to drop non-existent constraints.
+        await sequelize.sync({ alter: false });
+        //console.log('Database & tables synced!');
     } catch (error) {
         if (retries > 0 && error.parent && error.parent.code === 'ER_LOCK_DEADLOCK') {
             console.warn(`[Info] Database sync retry due to lock... (${retries} left)`);
