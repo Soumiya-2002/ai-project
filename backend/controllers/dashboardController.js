@@ -1,5 +1,16 @@
 const { School, Teacher, User, Lecture } = require('../models');
 
+/**
+ * dashboardController.js
+ * 
+ * Provides aggregate statistics for the Dashboard view.
+ * It calculates the number of teachers, schools, users, and lectures based on the current user's role.
+ */
+
+/**
+ * Retrieves counts of entities (schools, teachers, users, lectures) 
+ * filtered by the user's role (e.g. standardizing view for School Admin vs Super Admin).
+ */
 const getDashboardStats = async (req, res) => {
     try {
         const userRole = req.user?.role;

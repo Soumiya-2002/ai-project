@@ -11,9 +11,13 @@ const Rubric = require('./Rubric');
 const syncDatabase = async (retries = 3) => {
     try {
         await sequelize.authenticate();
-        // Changing alter: true to false to prevent 'UnknownConstraintError' 
         // when Sequelize tries to drop non-existent constraints.
         await sequelize.sync({ alter: false });
+
+        // Force alter specifically for 'Rubric' to update schema 
+        // without affecting 'Roles' which has max key issues on alter: true
+        await Rubric.sync({ alter: true });
+
         //console.log('Database & tables synced!');
     } catch (error) {
         if (retries > 0 && error.parent && error.parent.code === 'ER_LOCK_DEADLOCK') {

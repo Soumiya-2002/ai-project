@@ -8,16 +8,25 @@ const Rubric = sequelize.define('Rubric', {
         primaryKey: true,
         autoIncrement: true,
     },
-    criteria: {
-        type: DataTypes.STRING, // e.g., "Student Engagement"
+    grade: {
+        type: DataTypes.STRING,
         allowNull: false
     },
-    description: {
-        type: DataTypes.TEXT, // What to look for
+    file_path: {
+        type: DataTypes.STRING,
+        allowNull: false
     },
-    max_score: {
-        type: DataTypes.INTEGER,
-        defaultValue: 10
+    file_type: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    original_name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    content: {
+        type: DataTypes.TEXT('long'), // Parsed text from document
+        allowNull: true
     }
 }, {
     timestamps: true

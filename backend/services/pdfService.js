@@ -32,6 +32,8 @@ const generatePDF = (reportData, outputPath) => {
             }
             doc.moveDown();
 
+
+
             // --- Parameters Table ---
             doc.fontSize(14).font('Helvetica-Bold').text("Detailed Parameter Analysis", { underline: true });
             doc.moveDown(0.5);
@@ -73,6 +75,18 @@ const generatePDF = (reportData, outputPath) => {
                 doc.fontSize(14).font('Helvetica-Bold').text("Other Observations");
                 doc.fontSize(11).font('Helvetica');
                 reportData.cob_report.other_observations.forEach(o => doc.text(`• ${o}`));
+            }
+
+            // --- What Happened Section (End of Report) ---
+            doc.moveDown();
+            if (reportData.cob_report.what_happened && reportData.cob_report.what_happened.length > 0) {
+                doc.fontSize(14).font('Helvetica-Bold').text("What happened during the session:", { underline: true });
+                doc.fontSize(11).font('Helvetica');
+                doc.moveDown(0.5);
+                reportData.cob_report.what_happened.forEach(h => {
+                    doc.text(`• ${h}`, { indent: 15 });
+                });
+                doc.moveDown();
             }
 
             // Footer

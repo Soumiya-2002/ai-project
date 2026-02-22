@@ -1,3 +1,11 @@
+/**
+ * VideoUpload.js (Frontend)
+ * 
+ * This component handles the UI for the main Video Upload form.
+ * It strictly gathers necessary metadata Context (School, Teacher, Grade, Section, Docs) 
+ * and handles dispatching the Multipart Form Data to the backend. It also initiates polling
+ * to wait for the background AI Analysis process to complete and render the final success modal.
+ */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
@@ -24,11 +32,7 @@ const VideoUpload = () => {
     const [grade, setGrade] = useState('');
     const [section, setSection] = useState('');
 
-    // AI Prompt / Rubric Text
-    const [rubricText, setRubricText] = useState('');
 
-    // New File States
-    const [cobParamsFile, setCobParamsFile] = useState(null);
     const [readingMaterialFile, setReadingMaterialFile] = useState(null);
     const [lessonPlanFile, setLessonPlanFile] = useState(null);
 
@@ -55,6 +59,10 @@ const VideoUpload = () => {
         }
     };
 
+    /**
+     * Resolves the list of active teachers for a specific school.
+     * Required so the admin can assign the uploaded lecture to a specific educator.
+     */
     const loadTeachers = async (schoolId) => {
         try {
             // Changed from /teachers to /users/teachers to fetch from Users table
@@ -66,6 +74,9 @@ const VideoUpload = () => {
         }
     };
 
+    /**
+     * Resets dependent dropdowns (like Teachers) when the parent School dropdown changes.
+     */
     const handleSchoolChange = (e) => {
         const schoolId = e.target.value;
         setSelectedSchool(schoolId);
@@ -77,72 +88,25 @@ const VideoUpload = () => {
         }
     };
 
+    /**
+     * Captures the primary learning material (video/audio recording) from the file picker.
+     */
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
-    };
-
-    const handleExtractRubric = async () => {
-        if (!cobParamsFile) return;
-
-        const formData = new FormData();
-        formData.append('file', cobParamsFile);
-
-        try {
-            setMessage('Extracting text from file...');
-            const res = await api.post('/upload/extract-rubric', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-
-            if (res.data && res.data.text) {
-                setRubricText(res.data.text);
-                setMessage('Text extracted successfully! You can now edit it below.');
-            } else {
-                setMessage('Failed to extract text. Please try copy-pasting manually.');
-            }
-        } catch (err) {
-            console.error("Extraction failed", err);
-            setMessage('Error extracting text: ' + (err.response?.data?.message || err.message));
-        }
     };
 
     // State for Polling
     const [pollingLectureId, setPollingLectureId] = useState(null);
 
     // Polling Effect
-    useEffect(() => {
-        let interval;
-        if (pollingLectureId) {
-            interval = setInterval(async () => {
-                try {
-                    const res = await api.get(`/lectures/${pollingLectureId}`);
-                    const { status, pdfReportUrl } = res.data;
+    // Removed old continuous polling hook.
+    // The new flow just uploads the video and immediately shows a success message, 
+    // letting the user continue their work while AI processes in the background.
 
-                    if (status === 'completed') {
-                        clearInterval(interval);
-                        setPollingLectureId(null);
-                        setPdfUrl(pdfReportUrl);
-                        setIsLoading(false);
-                        setFile(null);
-
-                        // Show Success Modal
-                        setCompletedLectureId(pollingLectureId);
-                        setShowSuccessModal(true);
-
-                    } else if (status === 'failed') {
-                        clearInterval(interval);
-                        setPollingLectureId(null);
-                        setMessage('AI Analysis Failed. Please check logs.');
-                        setIsLoading(false);
-                    }
-                    // Else: still 'processing', continue polling
-                } catch (err) {
-                    console.error("Polling Error:", err);
-                }
-            }, 5000); // Poll every 5 seconds
-        }
-        return () => clearInterval(interval);
-    }, [pollingLectureId]);
-
+    /**
+     * Compiles the form context into a multipart FormData payload and fires it off to the backend.
+     * Activates the UI loader and sets up the ID required for background polling.
+     */
     const handleUpload = async (e) => {
         e.preventDefault();
 
@@ -161,7 +125,6 @@ const VideoUpload = () => {
         formData.append('section', section);
 
         // Append additional files if they exist
-        if (cobParamsFile) formData.append('cobParams', cobParamsFile);
         if (readingMaterialFile) formData.append('readingMaterial', readingMaterialFile);
         if (lessonPlanFile) formData.append('lessonPlan', lessonPlanFile);
 
@@ -177,10 +140,11 @@ const VideoUpload = () => {
             });
 
             if (res.data.status === 'processing' && res.data.lecture_id) {
-                // setMessage('Upload Successful! AI Analysis in progress... Please wait (2-3 mins).');
-                // Start polling
-                setPollingLectureId(res.data.lecture_id);
-                // Note: isLoading stays TRUE until polling finishes
+                // The backend received it and started background analysis
+                setIsLoading(false);
+                setFile(null);
+                setCompletedLectureId(res.data.lecture_id);
+                setShowSuccessModal(true);
             } else {
                 // Fallback for immediate path
                 if (res.data.pdfReport) {
@@ -188,7 +152,7 @@ const VideoUpload = () => {
                 }
                 setFile(null);
                 setIsLoading(false);
-                setMessage('Analysis Complete!');
+                setShowSuccessModal(true);
             }
 
         } catch (err) {
@@ -215,10 +179,10 @@ const VideoUpload = () => {
                 <div className="full-screen-loader">
                     <div className="loader-content">
                         <span className="loader-spinner"></span>
-                        <h3 className="loader-title">Analysis in Progress</h3>
+                        <h3 className="loader-title">Uploading Video...</h3>
                         <p className="loader-text">
-                            Please wait, the AI is analyzing your lecture video.<br />
-                            This usually takes 2-3 minutes. Do not close this tab.
+                            Please wait while your files are securely transferred to the server.<br />
+                            This may take a minute depending on your internet speed.
                         </p>
                     </div>
                 </div>
@@ -228,14 +192,17 @@ const VideoUpload = () => {
             {showSuccessModal && (
                 <div className="modal-overlay">
                     <div className="modal-content" style={{ textAlign: 'center', maxWidth: '500px' }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
-                        <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#111', marginBottom: '1rem' }}>Analysis Complete!</h2>
-                        <p style={{ color: '#4b5563', fontSize: '1.1rem', marginBottom: '2rem' }}>
-                            The AI has successfully analyzed the lecture video and generated the report.
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
+                        <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#111', marginBottom: '1rem' }}>Upload Successful!</h2>
+                        <p style={{ color: '#4b5563', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+                            Your video has been securely uploaded to the server.
+                        </p>
+                        <p style={{ color: '#0056b3', fontSize: '1rem', fontWeight: 'bold', marginBottom: '2rem' }}>
+                            The AI has started its analysis in the background. Please check the 'Reports' tab in 5 to 6 minutes.
                         </p>
                         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                             <button
-                                onClick={handleViewReport}
+                                onClick={() => navigate('/reports')}
                                 style={{
                                     padding: '0.8rem 1.5rem',
                                     background: '#000',
@@ -247,7 +214,7 @@ const VideoUpload = () => {
                                     fontSize: '1rem'
                                 }}
                             >
-                                View Report
+                                Go to Reports
                             </button>
                             <button
                                 onClick={handleCloseModal}
@@ -355,15 +322,20 @@ const VideoUpload = () => {
                             {/* New Grade & Section Fields */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Grade / Class</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. 10 or Kindergarten"
+                                <select
                                     value={grade}
                                     onChange={(e) => setGrade(e.target.value)}
                                     disabled={!selectedTeacher}
-                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff' }}
                                     required
-                                />
+                                >
+                                    <option value="" disabled>-- Select Grade --</option>
+                                    <option value="KG1">KG1</option>
+                                    <option value="KG2">KG2</option>
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => (
+                                        <option key={num} value={`Grade ${num}`}>Grade {num}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Section</label>
@@ -377,41 +349,11 @@ const VideoUpload = () => {
                                     required
                                 />
                             </div>
-
-                            {/* Option 2: Text Area (Main Field) */}
-                            <div style={{ gridColumn: 'span 2' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.95rem', fontWeight: '500', color: '#334155' }}>
-                                    AI Prompt / Instructions
-                                    <span style={{ marginLeft: '8px', fontSize: '0.8rem', color: '#64748b', fontWeight: '400' }}>
-                                        *This text acts as the strict prompt for the AI analysis.
-                                    </span>
-                                </label>
-                                <textarea
-                                    placeholder="Enter the specific AI Prompt or Rubric instructions here..."
-                                    value={rubricText}
-                                    onChange={(e) => setRubricText(e.target.value)}
-                                    disabled={!selectedTeacher}
-                                    rows="8" style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
-                                    required
-                                />
-                            </div>
                         </div>
 
-                        {/* COB Parameters (DOCX) */}
-                        <div className="form-group" style={{ marginBottom: '1.5rem', opacity: selectedDate ? 1 : 0.5 }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>COB Parameters (.docx / .pdf)</label>
-                            <input
-                                type="file"
-                                accept=".docx, .pdf"
-                                onChange={(e) => setCobParamsFile(e.target.files[0])}
-                                disabled={!selectedDate}
-                                style={{ width: '100%', padding: '0.8rem', border: '1px dashed #d1d5db', borderRadius: '8px' }}
-                                required
-                            // Removed 'value' to avoid controlled input error for file
-                            />
-                        </div>
 
-                        {/* Reading Material (PDF) */}
+
+
                         <div className="form-group" style={{ marginBottom: '1.5rem', opacity: selectedDate ? 1 : 0.5 }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Reading Material / Eye to Mind (.pdf)</label>
                             <input

@@ -3,6 +3,13 @@ import api from '../../api/axios';
 import { toast } from 'react-toastify';
 import './UserList.css';
 
+/**
+ * UserList.js (Frontend)
+ * 
+ * A system-wide user directory UI. 
+ * Allows creating specialized user roles (Super Admin, School Admin, Teacher) 
+ * and strictly enforcing school assignment for non-super roles.
+ */
 const UserList = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -26,6 +33,10 @@ const UserList = () => {
         loadSchools();
     }, [page]);
 
+    /**
+     * Grabs the list of all available schools. 
+     * Used exclusively to populate the School assignment dropdown for lower-tier roles.
+     */
     const loadSchools = async () => {
         try {
             const { data } = await api.get('/schools');
@@ -35,6 +46,10 @@ const UserList = () => {
         }
     };
 
+    /**
+     * Fetches user accounts from the backend API.
+     * Incorporates pagination to handle large datasets effectively.
+     */
     const loadUsers = async (startPage) => {
         try {
             setLoading(true);
@@ -52,10 +67,17 @@ const UserList = () => {
         }
     };
 
+    /**
+     * Syncs changes from input fields directly to the formData state.
+     */
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    /**
+     * Client-side gatekeeper before making network requests.
+     * Validates email structures, mandatory fields, and role-based conditionals (e.g. required school).
+     */
     const validateForm = () => {
         const { name, email, password, role, school_id } = formData;
 
@@ -79,6 +101,10 @@ const UserList = () => {
         return true;
     };
 
+    /**
+     * Triggers the User creation or updates workflow via Axios.
+     * Clears form data and re-pulls the fresh list of users on success.
+     */
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -102,6 +128,10 @@ const UserList = () => {
         }
     };
 
+    /**
+     * Mounts an extant user record's data into the creation form structure
+     * for easy administrative edits.
+     */
     const handleEdit = (user) => {
         setEditingUser(user.id);
         setFormData({
@@ -114,6 +144,9 @@ const UserList = () => {
         setShowModal(true);
     };
 
+    /**
+     * Forces definitive removal of a user profile spanning across the system.
+     */
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this user?')) {
             try {

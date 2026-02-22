@@ -1,3 +1,10 @@
+/**
+ * nlmService.js
+ * 
+ * Interacts with a Natural Language Model (NLM) API to generate specific pedagogical
+ * scores like engagement, clarity, and depth based on the transcription logic.
+ * Contains fallback logic if the API key is missing.
+ */
 const axios = require('axios');
 
 const generateRubricScore = async (analysisText) => {

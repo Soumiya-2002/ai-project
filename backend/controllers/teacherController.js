@@ -1,6 +1,18 @@
 const { Teacher, User, School, Role } = require('../models');
 const bcrypt = require('bcryptjs');
 
+/**
+ * teacherController.js
+ * 
+ * Manages Teacher profiles. A Teacher is tied to a standard User account 
+ * (for login credentials) and a specific School.
+ * This controller handles the creation, listing, updating, and deletion of teachers.
+ */
+
+/**
+ * Retrieves a paginated list of teachers.
+ * Enforces role-based access so School Admins only see teachers within their own school.
+ */
 const getTeachers = async (req, res) => {
     try {
         const { page = 1, limit = 10, school_id } = req.query;
@@ -56,6 +68,11 @@ const getTeachers = async (req, res) => {
     }
 };
 
+/**
+ * Creates a new Teacher.
+ * It simultaneously provisions a base User account (with hashed credentials)
+ * and links a corresponding Teacher profile to it.
+ */
 const addTeacher = async (req, res) => {
     try {
         const { name, email, password, school_id, subjects, experience } = req.body;
@@ -105,6 +122,10 @@ const addTeacher = async (req, res) => {
     }
 };
 
+/**
+ * Updates a Teacher profile and their underlying User details synchronously.
+ * Merges updates across both tables (User logic + Teacher subjects/experience).
+ */
 const updateTeacher = async (req, res) => {
     try {
         const { id } = req.params; // Teacher ID
@@ -140,6 +161,10 @@ const updateTeacher = async (req, res) => {
     }
 };
 
+/**
+ * Triggers a cascaded deletion of a teacher.
+ * Safely removes the Teacher profile and directly cleans up the attached User credentials.
+ */
 const deleteTeacher = async (req, res) => {
     try {
         const { id } = req.params;

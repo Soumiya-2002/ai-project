@@ -5,14 +5,32 @@ import logo from '../../assets/logo.png';
 import './Login.css';
 
 // Validation helpers
+/**
+ * Simple regex to ensure email formatting before API submission.
+ */
 const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+/**
+ * Enforces basic length requirements on the password field locally.
+ */
 const validatePassword = (password) => password.length >= 6;
 
+/**
+ * Login.js (Frontend)
+ * 
+ * The entry point for authentication.
+ * Captures email and password, sends them to the backend Auth API, 
+ * and stores the returned JWT token and user session data in localStorage.
+ * Depending on the role, users are then redirected to the Dashboard.
+ */
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  /**
+   * Orchestrates the primary authentication flow via POST /api/auth/login.
+   * Caches token data and triggers dashboard redirection upon success.
+   */
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!validateEmail(email)) return toast.error("Invalid Email");

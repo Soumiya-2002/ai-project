@@ -58,6 +58,13 @@ const AdminLayout = () => {
         // }
 
         items.push({
+            path: '/rubrics',
+            icon: 'fa-solid fa-list-check',
+            label: 'Rubrics',
+            description: 'Manage Grade Rubrics'
+        });
+
+        items.push({
             path: '/upload',
             icon: 'fa-solid fa-video',
             label: 'Upload Lecture',

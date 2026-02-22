@@ -4,6 +4,13 @@ import { toast } from 'react-toastify';
 
 import api from '../../api/axios';
 
+/**
+ * SchoolList.js (Frontend)
+ * 
+ * An administrative view (mostly for Super Admin) to manage onboarded Schools.
+ * Allows creating, editing, and disabling schools. Also includes a lookup table
+ * with sorting, pagination, and quick stats (number of teachers/students).
+ */
 const SchoolList = () => {
     const [schools, setSchools] = useState([]);
     const [filteredSchools, setFilteredSchools] = useState([]);
@@ -27,6 +34,10 @@ const SchoolList = () => {
         loadSchools(page);
     }, [page]);
 
+    /**
+     * Filters the currently loaded schools based on the search term.
+     * Updates the filteredSchools state, which is used for rendering the table.
+     */
     const filterSchools = useCallback(() => {
         let filtered = schools;
         if (searchTerm) {
@@ -41,6 +52,10 @@ const SchoolList = () => {
         filterSchools();
     }, [filterSchools]);
 
+    /**
+     * Fetches the specified page of schools from the backend API.
+     * Updates pagination context and the loaded list of schools.
+     */
     const loadSchools = async (startPage) => {
         try {
             const { data } = await api.get(`/schools?page=${startPage}&limit=${limit}`);
@@ -55,11 +70,19 @@ const SchoolList = () => {
         }
     };
 
+    /**
+     * Handles changes triggered by inputs across the school form.
+     * Centralized way to sync the UI with formData state dynamically.
+     */
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    /**
+     * Validates form constraints locally before hitting the server.
+     * Ensures mandatory fields are provided and formats (email, phone, counts) are valid.
+     */
     const validateForm = () => {
         const { name, address, principal, email, phone, teacherCount, studentCount } = formData;
 
@@ -89,6 +112,10 @@ const SchoolList = () => {
         return true;
     };
 
+    /**
+     * Submits the school creation or update mutation to the backend API.
+     * Resets the form and refreshes the data context upon success.
+     */
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -120,6 +147,10 @@ const SchoolList = () => {
         }
     };
 
+    /**
+     * Fills the modal form with data from the selected school
+     * and sets the application state to 'editing mode'.
+     */
     const handleEdit = (index) => {
         setEditingSchool(index);
         const school = schools[index];
@@ -136,6 +167,10 @@ const SchoolList = () => {
         setShowModal(true);
     };
 
+    /**
+     * Initiates the permanent deletion of a chosen school record.
+     * Uses browser confirmation to prevent accidental deletes.
+     */
     const handleDelete = async (index) => {
         if (window.confirm('Delete this school?')) {
             try {
@@ -150,6 +185,10 @@ const SchoolList = () => {
         }
     };
 
+    /**
+     * Simple flag toggle mapped to the status ('Active' | 'Inactive').
+     * Enables quick suspension without full edit workflow.
+     */
     const toggleStatus = async (index) => {
         const school = schools[index];
         const newStatus = school.status === 'Active' ? 'Inactive' : 'Active';
@@ -167,6 +206,10 @@ const SchoolList = () => {
         }
     };
 
+    /**
+     * Clears all temporary state properties related to the School form.
+     * Closes the modal.
+     */
     const resetForm = () => {
         setFormData({
             name: '', address: '', principal: '', email: '', phone: '', status: 'Active'

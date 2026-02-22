@@ -6,6 +6,18 @@ const { generateReportFromHtml } = require('../services/htmlReportService');
 const path = require('path');
 const fs = require('fs');
 
+/**
+ * analysisController.js
+ * 
+ * Handles the retrieval and generation of AI Analysis Reports.
+ * It contains functions to retrieve reports by lecture ID, and re-generate/patch
+ * detailed PDF reports for download.
+ */
+
+/**
+ * Runs the AI analysis manually (if not done in background).
+ * Orchestrates Vapi, Gemini, and NLM services to generate the final Report.
+ */
 const runAnalysis = async (req, res) => {
     try {
         const { lecture_id } = req.params;
@@ -48,6 +60,10 @@ const runAnalysis = async (req, res) => {
     }
 };
 
+/**
+ * Retrieves an existing AI Analysis report from the database by Lecture ID.
+ * Returns the raw JSON data of the report.
+ */
 const getReport = async (req, res) => {
     try {
         const { lecture_id } = req.params;
@@ -64,6 +80,12 @@ const getReport = async (req, res) => {
     }
 };
 
+/**
+ * Downloads the AI Report as a formatted PDF.
+ * If the PDF already exists and metadata is complete, it serves it directly.
+ * Otherwise, it patches missing metadata (School/Teacher) and uses htmlReportService
+ * to generate a brand new PDF on the fly before sending it to the client.
+ */
 const downloadReport = async (req, res) => {
     try {
         const { lecture_id } = req.params;
@@ -142,8 +164,7 @@ const downloadReport = async (req, res) => {
 
                     // Save back to DB to fix it permanently
                     if (report.update) {
-                        await report.update({ analysis_data: analysisData }); // Sequelize handles JSON stringify if dialect matches or manually if text
-                        // Assuming analysis_data is TEXT/JSON type
+                        await report.update({ analysis_data: JSON.stringify(analysisData) });
                     } else {
                         report.analysis_data = JSON.stringify(analysisData);
                         await report.save();

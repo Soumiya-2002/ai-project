@@ -1,3 +1,10 @@
+/**
+ * uploadController.js
+ * 
+ * This controller handles the core Video Upload process from the frontend.
+ * It uses 'multer' to handle multipart/form-data for file uploads, saves the files locally,
+ * provisions a database entry for the new Lecture, and starts the AI Analysis pipeline in the background.
+ */
 const multer = require('multer');
 const path = require('path');
 const { Lecture } = require('../models');
@@ -29,7 +36,6 @@ const upload = multer({
     }
 }).fields([
     { name: 'video', maxCount: 1 },
-    { name: 'cobParams', maxCount: 1 },
     { name: 'readingMaterial', maxCount: 1 },
     { name: 'lessonPlan', maxCount: 1 }
 ]);
@@ -88,8 +94,6 @@ const uploadVideo = async (req, res) => {
             //console.log("Video uploaded:", videoFile.filename);
 
             try {
-                // Extract text from auxiliary files
-                const cobText = req.files.cobParams ? await extractText(req.files.cobParams[0]) : "";
                 const readingText = req.files.readingMaterial ? await extractText(req.files.readingMaterial[0]) : "";
                 const lessonText = req.files.lessonPlan ? await extractText(req.files.lessonPlan[0]) : "";
 
@@ -194,7 +198,6 @@ const uploadVideo = async (req, res) => {
                             // Run AI Analysis
                             console.log("[Background] Calling AI Service (This takes time)...");
                             const analysisResult = await AiService.analyzeVideo(lecture.video_url, lecture.id, {
-                                cobParams: cobText,
                                 readingMaterial: readingText,
                                 lessonPlan: lessonText,
                                 meta: contextMeta

@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 
+/**
+ * Dashboard.js (Frontend)
+ * 
+ * Serves as the landing page after login.
+ * Displays interactive quick stats (Charts, Videos, Engagement) tailored to the logged-in user's role.
+ * It fetches the current session and real statistics from localStorage/API logic.
+ */
 const Dashboard = () => {
     const [session, setSession] = useState({ role: 'school_admin', user: { name: 'User' } });
     const [realStats, setRealStats] = useState({ teachers: 0, videos: 0 });
@@ -26,6 +33,10 @@ const Dashboard = () => {
     }, []);
 
     // Generate role-specific content
+    /**
+     * Determines which statistic cards to display based on the active user's role.
+     * For instance, teachers see 'My Videos' while admins see 'Total Schools'.
+     */
     const getStats = () => {
         if (session.role === 'teacher') {
             return [

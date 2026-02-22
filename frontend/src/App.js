@@ -13,6 +13,7 @@ import UserList from './pages/UserList/UserList';
 import './App.css';
 
 import Reports from './pages/Reports';
+import Rubrics from './pages/Rubrics/Rubrics';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
             <Route path="/users" element={<UserList />} />
             <Route path="/upload" element={<VideoUpload />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/rubrics" element={<Rubrics />} />
           </Route>
         </Route>
 

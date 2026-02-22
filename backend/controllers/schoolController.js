@@ -1,5 +1,17 @@
 const { School, Class, User } = require('../models');
 
+/**
+ * schoolController.js
+ * 
+ * Manages the School and Class resources.
+ * Allows Super Admins to create and manage schools, and handles the
+ * cascading of School information down to specific roles like Teachers and School Admins.
+ */
+
+/**
+ * Creates a new school entry in the database.
+ * Validates for duplicate email or name fields.
+ */
 const addSchool = async (req, res) => {
     try {
         const { name, address, contact_number, email, principal, teacher_count, student_count } = req.body;
@@ -36,6 +48,10 @@ const addSchool = async (req, res) => {
     }
 };
 
+/**
+ * Retrieves a paginated list of schools.
+ * If the requesting user is a School Admin or Teacher, it only returns their designated school.
+ */
 const getSchools = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query;
@@ -71,6 +87,10 @@ const getSchools = async (req, res) => {
     }
 };
 
+/**
+ * Updates specific fields of an existing School record.
+ * Handles duplicate email checks if the email is being changed.
+ */
 const updateSchool = async (req, res) => {
     try {
         const { id } = req.params;
@@ -93,6 +113,9 @@ const updateSchool = async (req, res) => {
     }
 };
 
+/**
+ * Removes a school from the database permanently.
+ */
 const deleteSchool = async (req, res) => {
     try {
         const { id } = req.params;
@@ -107,6 +130,9 @@ const deleteSchool = async (req, res) => {
     }
 };
 
+/**
+ * Adds a Class/Section assigned to a specific School ID.
+ */
 const addClass = async (req, res) => {
     try {
         const { school_id } = req.params;
@@ -125,6 +151,9 @@ const addClass = async (req, res) => {
     }
 };
 
+/**
+ * Retrieves all classes/sections associated with a given School ID.
+ */
 const getClasses = async (req, res) => {
     try {
         const { school_id } = req.params;

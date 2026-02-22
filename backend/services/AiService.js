@@ -1,4 +1,15 @@
-const { Report } = require('../models');
+/**
+ * AiService.js
+ * 
+ * Central orchestration module for all AI operations.
+ * It manages the multi-step pipeline for analyzing an uploaded lecture video:
+ * 1. Resolves the correct Grade-specific Rubric from the database.
+ * 2. Uses VapiService to extract and process audio transcription/analysis.
+ * 3. Uses NLMService to generate engagement/sentiment scores.
+ * 4. Combines the context (Prompt, Reading Material, Lesson Plan, Vapi Audio) and sends it to GeminiService to generate the final COB report.
+ * 5. Saves the generated analysis to the database and links it to the Lecture.
+ */
+const { Report, Rubric, Lecture } = require('../models');
 const vapiService = require('./ai/vapiService');
 const nlmService = require('./ai/nlmService');
 const geminiService = require('./ai/geminiService');
@@ -7,9 +18,33 @@ class AiService {
     async analyzeVideo(fileUrl, lectureId, context = {}) {
         //console.log(`Starting AI Pipeline for Lecture ${lectureId}...`, context);
 
-        const { cobParams, readingMaterial, lessonPlan } = context;
+        const { readingMaterial, lessonPlan, meta } = context;
 
-        const DEFAULT_RUBRIC = `
+        let usedRubric = '';
+        try {
+            let grade = meta && meta.grade ? meta.grade : null;
+            if (grade && grade !== 'N/A') {
+                // Map the specific grade to the broader Rubric category
+                let mappedGrade = grade;
+                if (['KG1', 'KG2'].includes(grade)) {
+                    mappedGrade = "KG 1 and KG 2";
+                } else if (['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'].includes(grade)) {
+                    mappedGrade = "Grade 1 to 8";
+                } else if (['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].includes(grade)) {
+                    mappedGrade = "Grade 9 to 12";
+                }
+                const rubric = await Rubric.findOne({ where: { grade: mappedGrade } });
+                if (rubric && rubric.content) {
+                    usedRubric = rubric.content;
+                    console.log("Using Rubric:", usedRubric);
+                }
+            }
+        } catch (e) {
+            console.error("Error fetching rubric:", e);
+        }
+
+        if (!usedRubric || usedRubric.trim() === '') {
+            usedRubric = `
         **Standard K12 Classroom Observation Rubric**
         
         **Category: Concepts (Weight: 50%)**
@@ -32,15 +67,14 @@ class AiService {
         6. **Time Management & Discipline**: (Max Score: 2)
            - Criteria: Session should flow broadly according to plan, maintaining student discipline and focus.
         `;
-
-        const usedRubric = cobParams && cobParams.trim().length > 10 ? cobParams : DEFAULT_RUBRIC;
+        }
 
         console.log("Using Rubric:", usedRubric.substring(0, 100) + "...");
 
         const SOP_PROMPT = `
         **SOP for generating COB reports using AI – Gemini 1.5 Pro**
         **Role**: Auditor/Observer.
-        **Task**: Analyze the video transcription and evaluate it according to the specific instructions below.
+        **Task**: Analyze the attached audio/video recording and evaluate it according to the specific instructions below.
         
         **CRITICAL INPUT: USER PROVIDED PROMPT / RUBRIC**
         """${usedRubric}"""
@@ -54,7 +88,7 @@ class AiService {
            - If it lists questions, answer them. 
            - If it lists a rubric table, fill it.
            - Do not use external standards unless the prompt explicitly asks for them.
-        2. **Evidence Based**: All scores and comments must be backed by evidence from the video transcription.
+        2. **Evidence Based**: All scores and comments must be backed by evidence from the recording.
         3. **Context**: Use the provided Lesson Plan and Reading Material to judge content accuracy and preparation.
         `;
 
@@ -65,7 +99,7 @@ class AiService {
             console.log("   Step 1 Complete: Vapi Transcription Received.", vapiResult);
             const transcription = vapiResult.transcription || "No transcription available.";
 
-            // 2. NLM: Rubric & Engagement Scoring (uses transcription)
+            // 2. NLM: Rubric & Engag ement Scoring (uses transcription)
             console.log("-> Step 2: NLM Rubric Scoring Started...");
             const nlmResult = await nlmService.generateRubricScore(transcription);
             console.log("   Step 2 Complete: NLM Scoring Generated.");
@@ -73,10 +107,14 @@ class AiService {
             // 3. Gemini: COB Reporting (uses transcription + context)
             console.log("-> Step 3: Gemini COB Analysis Started...");
 
-            // Pass the FULL Prompt including the parsed content, AND the meta context
+            // Pass the FULL Prompt including the parsed content, AND the meta context, AND the file context
             const geminiResult = await geminiService.generateAnalysis(
-                `Transcription: ${transcription} \n\n${SOP_PROMPT} `,
-                context.meta // Pass the metadata object
+                `${SOP_PROMPT}`,
+                context.meta, // Pass the metadata object
+                {
+                    fileUri: vapiResult.fileUri,
+                    mimeType: vapiResult.mimeType
+                }
             );
             console.log("   Step 3 Complete: Gemini Analysis Finished.");
 

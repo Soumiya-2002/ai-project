@@ -4,6 +4,13 @@ import { toast } from 'react-toastify';
 
 import api from '../../api/axios';
 
+/**
+ * TeacherList.js (Frontend)
+ * 
+ * Manages Teacher profiles. Allows School Admins to add new teachers 
+ * specifically under their own school. It fetches and lists teachers with pagination 
+ * and search functionality, and allows toggling their active status.
+ */
 const TeacherList = () => {
     const [teachers, setTeachers] = useState([]);
     const [schools, setSchools] = useState([]);
@@ -29,6 +36,10 @@ const TeacherList = () => {
         loadSchools(); // Load schools for dropdown
     }, [page]);
 
+    /**
+     * Filters the teacher list by matching the search term against name or email.
+     * Keeps the original 'teachers' array intact and updates 'filteredTeachers'.
+     */
     const filterTeachers = useCallback(() => {
         let filtered = teachers;
         if (searchTerm) {
@@ -44,6 +55,10 @@ const TeacherList = () => {
         filterTeachers();
     }, [filterTeachers]);
 
+    /**
+     * Fetches the global list of schools for the Assignment dropdown.
+     * Prevents School Admins from assigning teachers outside their domain (enforced by backend).
+     */
     const loadSchools = async () => {
         try {
             const { data } = await api.get('/schools');
@@ -64,6 +79,9 @@ const TeacherList = () => {
         }
     };
 
+    /**
+     * Polls the backend API for teachers, incorporating pagination logic.
+     */
     const loadTeachers = async (startPage) => {
         try {
             const { data } = await api.get(`/teachers?page=${startPage}&limit=${limit}`);
@@ -82,11 +100,18 @@ const TeacherList = () => {
         }
     };
 
+    /**
+     * One-way binding mechanism for form input updates.
+     */
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    /**
+     * Local constraints validation before pushing to the server.
+     * Checks for necessary fields, valid email parsing, and numeric boundaries.
+     */
     const validateForm = () => {
         const { name, email, school_id, experience } = formData;
 
@@ -121,6 +146,10 @@ const TeacherList = () => {
         return true;
     };
 
+    /**
+     * Wraps API POST (create) or PUT (update) logic.
+     * Reloads context arrays to avoid stale local state after modification.
+     */
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -153,6 +182,9 @@ const TeacherList = () => {
         }
     };
 
+    /**
+     * Stages an existing Teacher record into the modal form for updating.
+     */
     const handleEdit = (index) => {
         setEditingTeacher(index);
         const t = teachers[index];
@@ -167,6 +199,9 @@ const TeacherList = () => {
         setShowModal(true);
     };
 
+    /**
+     * Warns the admin before permanently destroying a teacher's record.
+     */
     const handleDelete = async (index) => {
         if (window.confirm('Delete this teacher?')) {
             try {
@@ -180,6 +215,10 @@ const TeacherList = () => {
         }
     };
 
+    /**
+     * Hot-swaps the teacher's active state (Active <-> Blocked), allowing
+     * direct suspension without requiring full edits.
+     */
     const toggleStatus = async (index) => {
         const teacher = teachers[index];
         const newStatus = teacher.status === 'Active' ? 'Blocked' : 'Active';
@@ -196,6 +235,10 @@ const TeacherList = () => {
         }
     };
 
+    /**
+     * Temporarily sets the admin's session token to act on behalf of a Teacher.
+     * (Primarily used for debugging/demonstration purposes).
+     */
     const handleImpersonate = (teacher) => {
         const sessionData = {
             token: "demo-token-impersonate-" + Date.now(),
@@ -213,6 +256,10 @@ const TeacherList = () => {
         }, 1000);
     };
 
+    /**
+     * Dismantles the form state and resets defaults.
+     * Ensures old data does not leak into new creation inputs.
+     */
     const resetForm = () => {
         setFormData({
             name: '',

@@ -2,6 +2,18 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User, Role, Teacher } = require('../models');
 
+/**
+ * authController.js
+ * 
+ * Handles user authentication including Registration and Login.
+ * Manages JWT Token generation and password hashing/validation using bcrypt.
+ */
+
+/**
+ * Registers a new user.
+ * Hashes their password, links them to a School if they are a teacher,
+ * and returns a JWT token for immediate login.
+ */
 const register = async (req, res) => {
     try {
         const { name, email, password, role, school_id } = req.body; // 'role' is string name here
@@ -63,6 +75,11 @@ const register = async (req, res) => {
     }
 };
 
+/**
+ * Authenticates an existing user.
+ * Validates the email and password against the hashed DB record,
+ * and returns user context (Role, School Info) along with a JWT token.
+ */
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;

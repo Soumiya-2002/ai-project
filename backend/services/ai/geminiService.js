@@ -1,3 +1,10 @@
+/**
+ * geminiService.js
+ * 
+ * This service directly interacts with the Google Gemini API (Multimodal capabilities).
+ * It sends structured system prompts, the lesson plan text, reading material,
+ * and the extracted audio URL to process and generate an educational Classroom Observation Report in JSON format.
+ */
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Mock Data Fallback
@@ -25,14 +32,19 @@ const getMockData = () => {
                 { "category": "Time Utilisation", "name": "Time Management", "score": 1, "out_of": 1, "comment": "Observed: Session started and ended on time." },
                 { "category": "Plan Adherence", "name": "Lesson Plan Followed", "score": 1, "out_of": 1, "comment": "Observed: Followed the sequence defined in the plan." }
             ],
+            "what_happened": [
+                "The facilitator covered the concepts 'activities that disturb water' and 'ways to save water' in the session.",
+                "She commenced the session by stating the agendas of the session.",
+                "She concluded the session by assigning the homework."
+            ],
             "highlights": ["Good energy", "Clear instructions"],
             "other_observations": ["Students were engaged"]
         }
     };
 };
 
-const generateAnalysis = async (textInput, meta = {}) => {
-    console.log("Calling Gemini API for Detailed Report...", meta);
+const generateAnalysis = async (textInput, meta = {}, fileContext = {}) => {
+    console.log("Calling Gemini API for Detailed Report...", meta, fileContext);
 
     if (!process.env.GEMINI_API_KEY) {
         console.warn("GEMINI_API_KEY is missing. Returning mock COB Report.");
@@ -40,23 +52,22 @@ const generateAnalysis = async (textInput, meta = {}) => {
     }
 
     const validModels = [
-        "gemini-flash-latest",
-        "gemini-2.5-flash",
+        "gemini-1.5-flash", // Prioritize Flash for multimodal
         "gemini-2.0-flash",
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-8b",
-        "gemini-pro"
+        "gemini-flash-latest",
+        "gemini-pro" // might fail for video if not 1.5-pro, but we prioritize flash
     ];
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
     // Construct Prompt with specific metadata instructions
     const prompt = `
-        You are an elite Educational Auditor. Your job is to evaluate a classroom lecture video transcription based STRICTLY on the User Provided Rubric / Instructions below.
+        You are an elite Educational Auditor. Your job is to evaluate the ATTACHED classroom lecture audio/video recording based STRICTLY on the User Provided Rubric / Instructions below.
+        Listen carefully to the recording and act as an expert evaluator.
         
         **METADATA CONTEXT:**
-        - Teacher Name: ${meta.facilitator || "Identify from transcript"}
-        - School: ${meta.school || "Identify from transcript"}
+        - Teacher Name: ${meta.facilitator || "Identify from recording"}
+        - School: ${meta.school || "Identify from recording"}
         - Grade: ${meta.grade || "Identify"}
         - Subject: ${meta.subject || "Identify"}
         - Date: ${meta.date || "Today"}
@@ -73,11 +84,12 @@ const generateAnalysis = async (textInput, meta = {}) => {
            - If the prompt is a standard rubric table, each row is a parameter.
            - **LOOK FOR MARKING SCHEME**: If the rubric mentions "Marks", "Weightage", or "Points" for each parameter, extract it.
         2. **Evaluate & Score**:
-           - Assign a score for each identified parameter based ONLY on the transcription evidence.
+           - Assign a score for each identified parameter based ONLY on the evidence from the recording.
            - If the user prompt defines a specific scoring scale (e.g., 1-5, or Yes/No), USE IT.
            - If no scale is defined, use a default 1-5 scale (1=Poor, 5=Excellent).
-        **CRITICAL INSTRUCTION: DATA COMPLETENESS**
-        - **Duration**: NEVER use "N/A". If the transcript doesn't state it, estimate it based on the word count (e.g., "45m") or use "45m" as a standard default.
+        **CRITICAL INSTRUCTION: DATA COMPLETENESS & ALL POINTS**
+        - **EVALUATE EVERY SINGLE POINT**: You MUST extract and evaluate EVERY SINGLE point, question, or parameter listed in the provided Rubric. Do NOT skip any. If the rubric has 25 points, your JSON 'parameters' array MUST have 25 items.
+        - **Duration**: NEVER use "N/A". If you can't tell perfectly, estimate it based on the recording length or use "45m" as a standard default.
         - **Weight**: 
             1. SCAN the User Provided Rubric for columns/text like "Weightage", "Weight", or "Percentage" next to each parameter.
             2. If found, use that EXACT value (e.g., "20%", "5", "10 pts").
@@ -94,7 +106,7 @@ const generateAnalysis = async (textInput, meta = {}) => {
                     "section": "${meta.section || "Section"}",
                     "subject": "${meta.subject || "Subject"}",
                     "date": "${meta.date || "Date"}",
-                    "topic_blm": "Topic from transcript",
+                    "topic_blm": "Topic identified from recording",
                     "duration": "45m",
                     "session_type": "Classroom"
                 },
@@ -109,14 +121,35 @@ const generateAnalysis = async (textInput, meta = {}) => {
                         "score": X,
                         "out_of": Y,
                         "weight": "1",
-                        "comment": "Specific transcript evidence."
+                        "comment": "Specific evidence from the recording."
                     }
+                ],
+                "what_happened": [
+                    "The facilitator covered the concepts...",
+                    "She used visual aids to conduct this session."
                 ],
                 "highlights": ["Strength 1", "Strength 2"],
                 "other_observations": ["Improvement Area 1", "Improvement Area 2"]
             }
         }
     `;
+
+    // Prepare Request Payload (Multimodal aware)
+    let requestPayload;
+    if (fileContext && fileContext.fileUri && fileContext.mimeType) {
+        console.log("Using Multimodal Payload (Video + Text)");
+        requestPayload = [
+            {
+                fileData: {
+                    mimeType: fileContext.mimeType,
+                    fileUri: fileContext.fileUri
+                }
+            },
+            { text: prompt }
+        ];
+    } else {
+        requestPayload = prompt;
+    }
 
     // Try each model until one works
     for (const modelName of validModels) {
@@ -127,7 +160,7 @@ const generateAnalysis = async (textInput, meta = {}) => {
                 generationConfig: { responseMimeType: "application/json" }
             });
 
-            const result = await model.generateContent(prompt);
+            const result = await model.generateContent(requestPayload);
             const responseText = result.response.text();
             console.log(`✅ Success with ${modelName}. Parsing response...`);
 

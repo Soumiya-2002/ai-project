@@ -1,5 +1,17 @@
 const { Lecture, Class, User, School } = require('../models');
 
+/**
+ * lectureController.js
+ * 
+ * Manages the core Lecture resource.
+ * This includes scheduling new lectures, retrieving filtered lists of lectures,
+ * and fetching specific lecture details along with its associated AI report.
+ */
+
+/**
+ * Creates a new scheduled lecture slot.
+ * Checks for existing bookings to prevent overlaps.
+ */
 const scheduleLecture = async (req, res) => {
     try {
         const { teacher_id, class_id, date, time_slot } = req.body;
@@ -32,6 +44,10 @@ const scheduleLecture = async (req, res) => {
     }
 };
 
+/**
+ * Retrieves a list of lectures based on query parameters and user role.
+ * Includes related School, Teacher, and Class data in the response.
+ */
 const getLectures = async (req, res) => {
     try {
         const { teacher_id, class_id, date } = req.query;
@@ -98,6 +114,10 @@ const getLectures = async (req, res) => {
     }
 };
 
+/**
+ * Retrieves a single lecture by ID.
+ * Also checks if an AI Report exists and attaches the PDF URL if completed.
+ */
 const getLectureById = async (req, res) => {
     try {
         const { id } = req.params;

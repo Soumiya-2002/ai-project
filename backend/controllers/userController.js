@@ -1,6 +1,18 @@
 const { User, Role, School } = require('../models');
 const bcrypt = require('bcryptjs');
 
+/**
+ * userController.js
+ * 
+ * Acts as the primary manager for all core User accounts across the system.
+ * Handles role-based visibility, ensuring users like School Admins can only view and mutate
+ * users within their assigned domain.
+ */
+
+/**
+ * Retrieves a paginated list of users.
+ * Filters automatically based on the requester's role (Super Admin vs School Admin).
+ */
 const getUsers = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query;
@@ -50,6 +62,10 @@ const getUsers = async (req, res) => {
     }
 };
 
+/**
+ * Creates a generic User account.
+ * Primarily used by Super Admins to provision School Admins or external roles.
+ */
 const createUser = async (req, res) => {
     try {
         const { name, email, password, role, school_id } = req.body;
@@ -93,6 +109,10 @@ const createUser = async (req, res) => {
     }
 };
 
+/**
+ * Updates an existing user's details.
+ * Can promote/demote roles and adjust school assignments dynamically.
+ */
 const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
@@ -131,6 +151,9 @@ const updateUser = async (req, res) => {
     }
 };
 
+/**
+ * Hard deletes a user from the system by their primary key ID.
+ */
 const deleteUser = async (req, res) => {
     try {
         await User.destroy({ where: { id: req.params.id } });
@@ -142,6 +165,10 @@ const deleteUser = async (req, res) => {
 };
 
 // Get teachers by school from Users table
+/**
+ * A specialized endpoint to fetch purely 'Teacher' users for dropdowns and assignments.
+ * Prevents exposing full user lists where only an active instructor list is needed.
+ */
 const getTeachersBySchool = async (req, res) => {
     try {
         const { school_id } = req.query;
