@@ -116,10 +116,10 @@ const uploadRubric = async (req, res) => {
             const file_type = path.extname(req.file.originalname).substring(1);
 
             if (existingRubric) {
-                // Remove old file
-                if (fs.existsSync(path.join(__dirname, '..', existingRubric.file_path))) {
-                    fs.unlinkSync(path.join(__dirname, '..', existingRubric.file_path));
-                }
+                // We no longer remove the old file, so that older AI Reports can still link to the exact rubric version they used.
+                // if (fs.existsSync(path.join(__dirname, '..', existingRubric.file_path))) {
+                //     fs.unlinkSync(path.join(__dirname, '..', existingRubric.file_path));
+                // }
 
                 existingRubric.file_path = `/uploads/${req.file.filename}`;
                 existingRubric.original_name = req.file.originalname;

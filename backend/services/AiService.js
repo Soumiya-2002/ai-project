@@ -21,6 +21,8 @@ class AiService {
         const { readingMaterial, lessonPlan, meta } = context;
 
         let usedRubric = '';
+        let usedRubricName = 'Standard K12 Classroom Observation Rubric';
+        let usedRubricUrl = '';
         try {
             let grade = meta && meta.grade ? meta.grade : null;
             if (grade && grade !== 'N/A') {
@@ -36,7 +38,9 @@ class AiService {
                 const rubric = await Rubric.findOne({ where: { grade: mappedGrade } });
                 if (rubric && rubric.content) {
                     usedRubric = rubric.content;
-                    console.log("Using Rubric:", usedRubric);
+                    usedRubricName = rubric.original_name;
+                    usedRubricUrl = process.env.BACKEND_URL ? `${process.env.BACKEND_URL}${rubric.file_path}` : `http://localhost:${process.env.PORT || 5001}${rubric.file_path}`;
+                    console.log(`Using Rubric: ${usedRubricName} (${usedRubricUrl})`);
                 }
             }
         } catch (e) {
@@ -117,6 +121,12 @@ class AiService {
                 }
             );
             console.log("   Step 3 Complete: Gemini Analysis Finished.");
+
+            // Inject the rubric reference into the generated report's header BEFORE it gets saved
+            if (geminiResult && geminiResult.cob_report && geminiResult.cob_report.header) {
+                geminiResult.cob_report.header.rubric_name = usedRubricName;
+                geminiResult.cob_report.header.rubric_url = usedRubricUrl;
+            }
 
             // 4. Aggregate & Save
             const finalReport = {
