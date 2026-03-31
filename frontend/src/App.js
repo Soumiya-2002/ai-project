@@ -10,6 +10,7 @@ import VideoUpload from './pages/VideoUpload/VideoUpload';
 import SchoolList from './pages/SchoolList/SchoolList';
 import TeacherList from './pages/TeacherList/TeacherList';
 import UserList from './pages/UserList/UserList';
+import AnswerSheetUpload from './pages/AnswerSheetUpload/AnswerSheetUpload';
 import './App.css';
 
 import Reports from './pages/Reports';
@@ -30,6 +31,7 @@ function App() {
             <Route path="/teachers" element={<TeacherList />} />
             <Route path="/users" element={<UserList />} />
             <Route path="/upload" element={<VideoUpload />} />
+            <Route path="/answer-sheet" element={<AnswerSheetUpload />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/rubrics" element={<Rubrics />} />
           </Route>

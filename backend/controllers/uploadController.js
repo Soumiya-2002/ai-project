@@ -8,6 +8,7 @@
 const multer = require('multer');
 const path = require('path');
 const { Lecture } = require('../models');
+const { extractTextFromImage } = require('../services/ocrService');
 
 // Configure Multer Storage
 const storage = multer.diskStorage({
@@ -51,6 +52,26 @@ function checkFileType(file, cb) {
         cb('Error: Videos Only for video field!');
     }
 }
+
+const checkImageFileType = (file, cb) => {
+    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = filetypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+        return cb(null, true);
+    } else {
+        cb('Error: Images Only for answer sheet field!');
+    }
+};
+
+const uploadImageMulter = multer({
+    storage: storage,
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+    fileFilter: function (req, file, cb) {
+        checkImageFileType(file, cb);
+    }
+}).single('image');
 
 // Helper to extract text
 const extractText = async (file) => {
@@ -245,6 +266,34 @@ const uploadVideo = async (req, res) => {
     });
 };
 
+const uploadAnswerSheet = async (req, res) => {
+    uploadImageMulter(req, res, async (err) => {
+        if (err) {
+            console.error("Multer Error:", err);
+            return res.status(400).json({ message: err });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'No image selected!' });
+        }
+
+        try {
+            console.log(`Image uploaded: ${req.file.filename}`);
+            const text = await extractTextFromImage(req.file.path, req.file.mimetype);
+
+            res.status(200).json({
+                message: 'Image uploaded and text extracted successfully.',
+                text: text,
+                file: `/uploads/${req.file.filename}`
+            });
+        } catch (error) {
+            console.error("Extraction Error:", error);
+            res.status(500).json({ message: 'Error extracting text from image', error: error.message });
+        }
+    });
+};
+
 module.exports = {
-    uploadVideo
+    uploadVideo,
+    uploadAnswerSheet
 };

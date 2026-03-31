@@ -39,7 +39,8 @@ class AiService {
                 if (rubric && rubric.content) {
                     usedRubric = rubric.content;
                     usedRubricName = rubric.original_name;
-                    usedRubricUrl = process.env.BACKEND_URL ? `${process.env.BACKEND_URL}${rubric.file_path}` : `http://localhost:${process.env.PORT || 5001}${rubric.file_path}`;
+                    const baseUrl = process.env.BACKEND_URL || 'https://lmsapi.nitisolutions.com';
+                    usedRubricUrl = `${baseUrl}${rubric.file_path}`;
                     console.log(`Using Rubric: ${usedRubricName} (${usedRubricUrl})`);
                 }
             }

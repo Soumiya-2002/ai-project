@@ -18,6 +18,7 @@ const VideoUpload = () => {
     const [file, setFile] = useState(null);
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [pdfUrl, setPdfUrl] = useState(null);
 
     // Modal State
@@ -130,12 +131,19 @@ const VideoUpload = () => {
 
         try {
             setIsLoading(true);
+            setUploadProgress(0);
             setMessage('Uploading Video... Analysis will start automatically.');
             setPdfUrl(null);
 
             const res = await api.post('/upload', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
+                },
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent.total) {
+                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        setUploadProgress(percentCompleted);
+                    }
                 }
             });
 
@@ -159,6 +167,7 @@ const VideoUpload = () => {
             console.error(err);
             setMessage('Upload Failed: ' + (err.response?.data?.message || err.message));
             setIsLoading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -180,6 +189,12 @@ const VideoUpload = () => {
                     <div className="loader-content">
                         <span className="loader-spinner"></span>
                         <h3 className="loader-title">Uploading Video...</h3>
+                        <div style={{ width: '100%', marginTop: '1rem', marginBottom: '1rem' }}>
+                            <div style={{ background: '#e5e7eb', borderRadius: '8px', overflow: 'hidden', height: '12px' }}>
+                                <div style={{ width: `${uploadProgress}%`, background: '#2563eb', height: '100%', transition: 'width 0.3s' }}></div>
+                            </div>
+                            <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#4b5563', fontWeight: 'bold' }}>{uploadProgress}% Uploaded</p>
+                        </div>
                         <p className="loader-text">
                             Please wait while your files are securely transferred to the server.<br />
                             This may take a minute depending on your internet speed.
