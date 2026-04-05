@@ -71,12 +71,12 @@ const AdminLayout = () => {
             description: 'Upload & Manage'
         });
 
-        items.push({
-            path: '/answer-sheet',
-            icon: 'fa-solid fa-file-pen',
-            label: 'Answer Sheet',
-            description: 'Extract Text'
-        });
+        // items.push({
+        //     path: '/answer-sheet',
+        //     icon: 'fa-solid fa-file-pen',
+        //     label: 'Answer Sheet',
+        //     description: 'Extract Text'
+        // });
 
         if (currentRole === 'superadmin' || currentRole === 'schooladmin' || currentRole === 'teacher') {
             items.push({

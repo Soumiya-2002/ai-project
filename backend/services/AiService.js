@@ -142,13 +142,43 @@ class AiService {
                 auditor_note: "AI Analysis Complete. Please verify."
             };
 
-            // Calculate formatted aggregate score (Simple average or from NLM)
-            const score = nlmResult.engagement ? (nlmResult.engagement * 10) : 85;
+            // Calculate formatted aggregate score based on Weighted Percentage
+            let calculatedScore = 0;
+            if (geminiResult && geminiResult.cob_report && geminiResult.cob_report.parameters) {
+                let totalWeight = 0;
+                let earnedWeightedScore = 0;
+
+                geminiResult.cob_report.parameters.forEach(p => {
+                    let wStr = String(p.weight || "1").replace(/[^0-9.]/g, '');
+                    let w = parseFloat(wStr) || 1;
+                    
+                    let sStr = String(p.score).match(/^[0-9.]+/);
+                    let s = sStr ? parseFloat(sStr[0]) : 0;
+                    
+                    let outOfStr = String(p.out_of).match(/^[0-9.]+/);
+                    let outOf = outOfStr ? parseFloat(outOfStr[0]) : 1;
+                    
+                    if (outOf > 0) {
+                        earnedWeightedScore += (s / outOf) * w;
+                        totalWeight += w;
+                    }
+                });
+
+                if (totalWeight > 0) {
+                    calculatedScore = (earnedWeightedScore / totalWeight) * 100;
+                }
+                
+                // Override the overall_percentage accurately
+                if (!geminiResult.cob_report.scores) geminiResult.cob_report.scores = {};
+                geminiResult.cob_report.scores.overall_percentage = calculatedScore.toFixed(1) + "%";
+            }
+            
+            const finalScoreToSave = calculatedScore > 0 ? calculatedScore : (nlmResult.engagement ? (nlmResult.engagement * 10) : 85);
 
             await Report.create({
                 lecture_id: lectureId,
                 analysis_data: JSON.stringify(finalReport),
-                score: Math.min(100, Math.max(0, score)),
+                score: Math.min(100, Math.max(0, finalScoreToSave)),
                 generated_by_ai: true
             });
 

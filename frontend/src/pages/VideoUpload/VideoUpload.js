@@ -116,36 +116,59 @@ const VideoUpload = () => {
             return;
         }
 
-        const formData = new FormData();
-        formData.append('video', file);
-        formData.append('school_id', selectedSchool);
-        formData.append('teacher_id', selectedTeacher);
-        formData.append('date', selectedDate);
-        formData.append('lecture_number', lectureNumber);
-        formData.append('grade', grade);
-        formData.append('section', section);
-
-        // Append additional files if they exist
-        if (readingMaterialFile) formData.append('readingMaterial', readingMaterialFile);
-        if (lessonPlanFile) formData.append('lessonPlan', lessonPlanFile);
-
         try {
             setIsLoading(true);
             setUploadProgress(0);
-            setMessage('Uploading Video... Analysis will start automatically.');
+            setMessage('Uploading Video in Chunks... Analysis will start automatically.');
             setPdfUrl(null);
 
-            const res = await api.post('/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                },
-                onUploadProgress: (progressEvent) => {
-                    if (progressEvent.total) {
-                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                        setUploadProgress(percentCompleted);
-                    }
-                }
+            const uploadId = 'upload_' + Date.now() + '_' + Math.random().toString(36).substring(7);
+            const CHUNK_SIZE = 500 * 1024; // 500KB chunks to strictly bypass NGINX 1MB limits
+            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+            
+            // Upload chunks
+            for (let i = 0; i < totalChunks; i++) {
+                const start = i * CHUNK_SIZE;
+                const end = Math.min(file.size, start + CHUNK_SIZE);
+                const chunk = file.slice(start, end);
+
+                const chunkForm = new FormData();
+                chunkForm.append('chunk', chunk, 'blob'); // Specify filename 'blob' to ensure it parses correctly
+                chunkForm.append('uploadId', uploadId);
+                chunkForm.append('chunkIndex', i);
+
+                await api.post('/upload/chunk', chunkForm, {
+                    timeout: 0
+                });
+                
+                // Update progress up to 90%
+                setUploadProgress(Math.round(((i + 1) / totalChunks) * 90));
+            }
+
+            // Finalize upload
+            const finalForm = new FormData();
+            finalForm.append('school_id', selectedSchool);
+            finalForm.append('teacher_id', selectedTeacher);
+            finalForm.append('date', selectedDate);
+            finalForm.append('lecture_number', lectureNumber);
+            finalForm.append('grade', grade);
+            finalForm.append('section', section);
+            
+            // Chunk metadata to merge on the backend
+            finalForm.append('uploadId', uploadId);
+            finalForm.append('totalChunks', totalChunks);
+            finalForm.append('originalVideoName', file.name);
+
+            if (readingMaterialFile) finalForm.append('readingMaterial', readingMaterialFile);
+            if (lessonPlanFile) finalForm.append('lessonPlan', lessonPlanFile);
+
+            setMessage('Merging Video on Server...');
+
+            const res = await api.post('/upload', finalForm, {
+                timeout: 0
             });
+            
+            setUploadProgress(100);
 
             if (res.data.status === 'processing' && res.data.lecture_id) {
                 // The backend received it and started background analysis

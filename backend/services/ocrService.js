@@ -32,8 +32,19 @@ const extractTextFromImage = async (filePath, mimeType) => {
             console.log(`Attempting Gemini Vision extraction with model: ${modelName}...`);
             const model = genAI.getGenerativeModel({ model: modelName });
 
+            const prompt = `Transcribe ALL handwritten text in this document EXACTLY as the student wrote it. Do not auto-correct spelling or grammar mistakes made by the student. 
+CRITICAL INSTRUCTIONS:
+1. VERBATIM EXTRACTION: Output exactly the letters and words the student wrote. If a word is misspelled, preserve the misspelling. DO NOT add extra text or fix mistakes.
+2. HUMAN-LIKE REASONING FOR BAD HANDWRITING: Read the document like a human teacher would. Use logical context to identify list items (e.g., "i)", "ii)", "iii)", "a)", "b)"). NEVER output garbage symbols like "!p)", "i!q)", "i!r)" at the start of sentences. If a red checkmark crosses Roman numerals, it mathematically creates shapes that look like '!', 'p', 'q', or 'r' to OCR. YOU MUST autocorrect these visual glitches back to standard Roman numerals: 'i)', 'ii)', 'iii)'.
+3. IGNORE TEACHER CHECKMARKS AS TEXT: The page has large red checkmarks/slashes drawn across the answers. DO NOT interpret these red lines or their endpoints as text characters! Specifically, DO NOT output trailing single quotes ('), commas, or random letters (like '<', 'X', 'S') at the end of lines caused by these red marks. Treat the red checkmarks/slashes as invisible overlays.
+4. IGNORE NOISE & STRAY MARKS: Do not transcribe blank signature lines, underlines, page borders, dirt, or stray dots as punctuation.
+5. NO MARKDOWN LISTS OR DUPLICATE NUMBERS: Do not interpret the lines as a numbered list. For example, if a line starts with "1) b. Noon", output exactly "1) b. Noon". Do NOT output "1) 1) b. Noon". Never add artificial numbering.
+6. TEACHER MARKS & NUMBERS: Extract numerical scores (like '1/2', '1') inline where they appear. Ignore the giant physical checkmarks.
+7. SPATIAL LAYOUT & BLANK LINES (CRITICAL): Preserve the exact vertical spacing! If the student leaves a blank line between two answers, you MUST output a blank line (press Enter twice). If they indent "i)" and "ii)", you must also indent them. It must visually reflect the human readable answer sheet distances.
+8. If there are multiple pages, separate each page's text completely with the exact phrase '|||PAGE_BREAK|||' at the end of every page before starting the next.`;
+
             const result = await model.generateContent([
-                "Extract all the handwritten text from this image exactly as written. Preserve line breaks, punctuation, and structural formatting where possible. Do not interpret or change the text, just read it literally.",
+                prompt,
                 imagePart,
             ]);
 

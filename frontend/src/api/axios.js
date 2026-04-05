@@ -1,12 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5001',
+    // baseURL: 'http://localhost:5001/api',
     // baseURL: 'https://lmsapi.nitisolutions.com',
-
-    headers: {
-        'Content-Type': 'application/json'
-    }
+    baseURL: 'http://192.168.1.253:5001/api'
 });
 
 api.interceptors.request.use(

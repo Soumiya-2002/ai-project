@@ -31,10 +31,12 @@ function App() {
             <Route path="/teachers" element={<TeacherList />} />
             <Route path="/users" element={<UserList />} />
             <Route path="/upload" element={<VideoUpload />} />
-            <Route path="/answer-sheet" element={<AnswerSheetUpload />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/rubrics" element={<Rubrics />} />
           </Route>
+          
+          {/* Standalone Route without Sidebar */}
+          <Route path="/answer-sheet" element={<AnswerSheetUpload />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/login" />} />

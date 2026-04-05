@@ -144,7 +144,10 @@ const generateReportFromHtml = async (data, templatePath, outputPath) => {
             catParams.forEach(p => {
                 const score = p.score !== undefined ? p.score : 0;
                 const max = p.out_of || 2;
-                const weight = (p.weight && p.weight !== 'N/A') ? p.weight : '1';
+                let weight = (p.weight && p.weight !== 'N/A') ? String(p.weight) : '1';
+                if (!weight.includes('%')) {
+                    weight += '%';
+                }
 
                 tableBody += `
                     <tr>
@@ -260,9 +263,26 @@ function generateDynamicSegmentTable(params) {
 
     const rows = Object.keys(grouped).map(catName => {
         const catParams = grouped[catName];
-        const score = catParams.reduce((acc, p) => acc + (p.score || 0), 0);
-        const total = catParams.reduce((acc, p) => acc + (p.out_of || 0), 0);
-        const percentage = total ? ((score / total) * 100).toFixed(0) + '%' : 'N/A';
+        let totalWeight = 0;
+        let earnedWeightedScore = 0;
+
+        catParams.forEach(p => {
+            let wStr = String(p.weight || "1").replace(/[^0-9.]/g, '');
+            let w = parseFloat(wStr) || 1;
+            
+            let sStr = String(p.score).match(/^[0-9.]+/);
+            let s = sStr ? parseFloat(sStr[0]) : 0;
+            
+            let outOfStr = String(p.out_of).match(/^[0-9.]+/);
+            let outOf = outOfStr ? parseFloat(outOfStr[0]) : 1;
+            
+            if (outOf > 0) {
+                earnedWeightedScore += (s / outOf) * w;
+                totalWeight += w;
+            }
+        });
+
+        const percentage = totalWeight > 0 ? ((earnedWeightedScore / totalWeight) * 100).toFixed(0) + '%' : 'N/A';
 
         return `
             <tr>

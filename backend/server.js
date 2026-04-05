@@ -27,17 +27,17 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use('/auth', authRoutes);
-app.use('/schools', schoolRoutes);
-app.use('/teachers', require('./routes/teacherRoutes'));
-app.use('/users', require('./routes/userRoutes'));
-app.use('/lectures', lectureRoutes);
-app.use('/upload', uploadRoutes);
-app.use('/analysis', analysisRoutes);
-app.use('/dashboard', require('./routes/dashboardRoutes'));
-app.use('/rubrics', rubricRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/schools', schoolRoutes);
+app.use('/api/teachers', require('./routes/teacherRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/lectures', lectureRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/analysis', analysisRoutes);
+app.use('/api/dashboard', require('./routes/dashboardRoutes'));
+app.use('/api/rubrics', rubricRoutes);
 
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
     res.send('API is running...');
 });
 
@@ -49,8 +49,11 @@ const startServer = async () => {
         console.log(`Server running on port ${PORT}`);
     });
 
-    // Set timeout to 30 minutes for large uploads
-    server.timeout = 30 * 60 * 1000;
+    // Set timeout to 0 (no timeout) for large uploads on slow connections
+    server.timeout = 0;
+    server.keepAliveTimeout = 61 * 1000;
+    server.headersTimeout = 65 * 1000; // Must be strictly greater than keepAliveTimeout
+    server.requestTimeout = 0; // Disable request timeout
 };
 
 startServer();

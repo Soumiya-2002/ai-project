@@ -54,14 +54,14 @@ function checkFileType(file, cb) {
 }
 
 const checkImageFileType = (file, cb) => {
-    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const filetypes = /jpeg|jpg|png|gif|webp|pdf/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = filetypes.test(file.mimetype);
 
     if (mimetype && extname) {
         return cb(null, true);
     } else {
-        cb('Error: Images Only for answer sheet field!');
+        cb('Error: Images or PDFs Only for answer sheet field!');
     }
 };
 
@@ -105,14 +105,36 @@ const uploadVideo = async (req, res) => {
             //console.log("Files:", req.files ? Object.keys(req.files) : "None");
             //console.log("Body:", req.body);
 
-            // Check if video exists
-            if (!req.files || !req.files.video) {
+            let videoFileName = '';
+
+            if (req.body.uploadId && req.body.originalVideoName && req.body.totalChunks) {
+                // Chunked upload merge logic
+                const finalExt = path.extname(req.body.originalVideoName);
+                videoFileName = `video-${Date.now()}${finalExt}`;
+                const finalFilePath = path.join(__dirname, '../uploads', videoFileName);
+                const tempDir = path.join(__dirname, '../uploads/temp', req.body.uploadId);
+
+                try {
+                    const writeStream = fs.createWriteStream(finalFilePath);
+                    for (let i = 0; i < parseInt(req.body.totalChunks); i++) {
+                        const chunkPath = path.join(tempDir, i.toString());
+                        if (!fs.existsSync(chunkPath)) throw new Error(`Missing chunk ${i}`);
+                        const data = fs.readFileSync(chunkPath);
+                        writeStream.write(data);
+                        fs.unlinkSync(chunkPath);
+                    }
+                    writeStream.end();
+                    try { fs.rmdirSync(tempDir); } catch (err) { }
+                } catch (e) {
+                    console.error("Chunk Merge Error:", e);
+                    return res.status(500).json({ message: "Failed to merge video chunks.", error: e.message });
+                }
+            } else if (req.files && req.files.video) {
+                videoFileName = req.files.video[0].filename;
+            } else {
                 console.warn("No video file found in request");
                 return res.status(400).json({ message: 'No video selected!' });
             }
-
-            const videoFile = req.files.video[0];
-            //console.log("Video uploaded:", videoFile.filename);
 
             try {
                 const readingText = req.files.readingMaterial ? await extractText(req.files.readingMaterial[0]) : "";
@@ -125,7 +147,7 @@ const uploadVideo = async (req, res) => {
                     //console.log("Updating existing lecture:", lecture_id);
                     lecture = await Lecture.findByPk(lecture_id);
                     if (lecture) {
-                        lecture.video_url = `/uploads/${videoFile.filename}`;
+                        lecture.video_url = `/uploads/${videoFileName}`;
                         lecture.status = 'completed';
                         // Update grade/section if provided
                         if (req.body.grade) lecture.grade = req.body.grade;
@@ -139,7 +161,7 @@ const uploadVideo = async (req, res) => {
                         teacher_id, // User ID from Users table
                         date,
                         lecture_number: lecture_number || 1,
-                        video_url: `/uploads/${videoFile.filename}`,
+                        video_url: `/uploads/${videoFileName}`,
                         grade: req.body.grade || null,
                         section: req.body.section || null,
                         status: 'completed'
@@ -156,7 +178,7 @@ const uploadVideo = async (req, res) => {
                 // Return immediate response to User so they don't wait 3-4 minutes
                 res.status(202).json({
                     message: 'Upload Successful! AI Analysis started in background.',
-                    file: `/uploads/${videoFile.filename}`,
+                    file: `/uploads/${videoFileName}`,
                     lecture: lecture,
                     status: 'processing',
                     lecture_id: lecture.id
@@ -274,26 +296,100 @@ const uploadAnswerSheet = async (req, res) => {
         }
 
         if (!req.file) {
-            return res.status(400).json({ message: 'No image selected!' });
+            return res.status(400).json({ message: 'No file selected!' });
         }
 
         try {
-            console.log(`Image uploaded: ${req.file.filename}`);
+            console.log(`File uploaded: ${req.file.filename}`);
             const text = await extractTextFromImage(req.file.path, req.file.mimetype);
 
-            res.status(200).json({
-                message: 'Image uploaded and text extracted successfully.',
-                text: text,
-                file: `/uploads/${req.file.filename}`
+            // Generate PDF from extracted text
+            const PDFDocument = require('pdfkit');
+            const pdfFilename = `extracted-${Date.now()}.pdf`;
+            const pdfPath = path.join(__dirname, '../uploads', pdfFilename);
+
+            const doc = new PDFDocument({ margin: 50 });
+            const writeStream = fs.createWriteStream(pdfPath);
+            doc.pipe(writeStream);
+
+            // Split extracted text into pages using the requested delimiter
+            const pages = text.split(/\|\|\|PAGE_BREAK\|\|\|/gi).map(p => p.trim()).filter(p => p.length > 0);
+
+            if (pages.length === 0) {
+                doc.fontSize(18).font('Helvetica-Bold').text('Extracted Answer Sheet');
+                doc.moveDown();
+                doc.fontSize(12).font('Helvetica').text('No text extracted.', { align: 'left' });
+            } else {
+                pages.forEach((pageText, index) => {
+                    if (index > 0) {
+                        doc.addPage();
+                    }
+                    doc.fontSize(18).font('Helvetica-Bold').text(`Extracted Answer Sheet - Page ${index + 1}`);
+                    doc.moveDown(1.5);
+                    doc.fontSize(12).font('Helvetica').text(pageText, { align: 'left', lineGap: 4 });
+                });
+            }
+
+            doc.end();
+
+            writeStream.on('finish', () => {
+                res.status(200).json({
+                    message: 'File uploaded and text extracted successfully.',
+                    text: text,
+                    file: `/uploads/${req.file.filename}`,
+                    pdfUrl: `/uploads/${pdfFilename}`
+                });
             });
+
         } catch (error) {
             console.error("Extraction Error:", error);
-            res.status(500).json({ message: 'Error extracting text from image', error: error.message });
+            res.status(500).json({ message: 'Error extracting text from file', error: error.message });
         }
+    });
+};
+
+const chunkStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const tempDir = path.join(__dirname, '../uploads/temp');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+        cb(null, tempDir);
+    },
+    filename: function (req, file, cb) {
+        cb(null, 'chunk-' + Date.now());
+    }
+});
+const uploadChunkMulter = multer({ storage: chunkStorage }).single('chunk');
+
+const uploadChunk = async (req, res) => {
+    uploadChunkMulter(req, res, async (err) => {
+        if (err) {
+            console.error("Multer error in uploadChunk:", err);
+            require('fs').writeFileSync('multer_error.log', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+            return res.status(400).json({ message: err.message || err });
+        }
+        const { uploadId, chunkIndex } = req.body;
+        const chunkFile = req.file;
+
+        if (!chunkFile || !uploadId || chunkIndex === undefined) {
+            return res.status(400).json({ message: "Invalid payload" });
+        }
+
+        const tempDir = path.join(__dirname, '../uploads/temp', uploadId);
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        const chunkPath = path.join(tempDir, chunkIndex.toString());
+        fs.renameSync(chunkFile.path, chunkPath);
+
+        res.status(200).send("OK");
     });
 };
 
 module.exports = {
     uploadVideo,
+    uploadChunk,
     uploadAnswerSheet
 };

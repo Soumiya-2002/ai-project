@@ -89,12 +89,14 @@ const generateAnalysis = async (textInput, meta = {}, fileContext = {}) => {
            - Assign a score for each identified parameter based ONLY on the evidence from the recording.
            - If the user prompt defines a specific scoring scale (e.g., 1-5, or Yes/No), USE IT.
            - If no scale is defined, use a default 1-5 scale (1=Poor, 5=Excellent).
-        **CRITICAL INSTRUCTION: DATA COMPLETENESS & ALL POINTS**
+        **CRITICAL INSTRUCTION: DATA COMPLETENESS & DEEP ANALYSIS**
+        - **DEEP & RIGOROUS ANALYSIS**: Do not provide brief comments. Perform an exceptionally detailed, deep, and rigorous analysis. For every parameter, explain *why* the score was given, cite specific examples verbatim from the recording, and offer actionable feedback.
+        - **FAIR, CRITICAL & REALISTIC SCORING**: Do not simply award full marks (e.g., 2/2, 5/5) just because the teacher merely mentioned or covered a topic. You must evaluate *how effectively* it was covered. Be a critical, objective observer. Properly distribute the scores (e.g., 1/2, 1.5/2, etc.) and deduct marks for areas of improvement like: speaking too fast, not checking for understanding from students, lack of genuine engagement, or minor teaching gaps. Award scores genuinely based on the true quality of the teaching session, and only give maximum points for genuinely excellent teaching.
         - **EVALUATE EVERY SINGLE POINT**: You MUST extract and evaluate EVERY SINGLE point, question, or parameter listed in the provided Rubric. Do NOT skip any. If the rubric has 25 points, your JSON 'parameters' array MUST have 25 items.
         - **Duration**: NEVER use "N/A". If you can't tell perfectly, estimate it based on the recording length or use "45m" as a standard default.
         - **Weight**: 
             1. SCAN the User Provided Rubric for columns/text like "Weightage", "Weight", or "Percentage" next to each parameter.
-            2. If found, use that EXACT value (e.g., "20%", "5", "10 pts").
+            2. If found, use that EXACT purely numeric value (e.g., if "20%", return "20". if "5 pits", return "5").
             3. If NOT found, use default "1".
             4. NEVER leave as "N/A".
 
