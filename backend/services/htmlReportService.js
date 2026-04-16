@@ -220,10 +220,18 @@ const generateReportFromHtml = async (data, templatePath, outputPath) => {
         `;
 
         // 5. Generate PDF
-        const browser = await puppeteer.launch({
+        const puppeteerOptions = {
             headless: 'new',
             args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
+        };
+        // Use system chromium if specified, otherwise rely on Puppeteer's bundled browser
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+            puppeteerOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        } else if (fs.existsSync('/usr/bin/chromium-browser')) {
+             puppeteerOptions.executablePath = '/usr/bin/chromium-browser';
+        }
+
+        const browser = await puppeteer.launch(puppeteerOptions);
         const page = await browser.newPage();
         await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
         await page.pdf({
@@ -269,13 +277,13 @@ function generateDynamicSegmentTable(params) {
         catParams.forEach(p => {
             let wStr = String(p.weight || "1").replace(/[^0-9.]/g, '');
             let w = parseFloat(wStr) || 1;
-            
+
             let sStr = String(p.score).match(/^[0-9.]+/);
             let s = sStr ? parseFloat(sStr[0]) : 0;
-            
+
             let outOfStr = String(p.out_of).match(/^[0-9.]+/);
             let outOf = outOfStr ? parseFloat(outOfStr[0]) : 1;
-            
+
             if (outOf > 0) {
                 earnedWeightedScore += (s / outOf) * w;
                 totalWeight += w;

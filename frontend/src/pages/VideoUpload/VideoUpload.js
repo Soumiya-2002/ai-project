@@ -122,30 +122,7 @@ const VideoUpload = () => {
             setMessage('Uploading Video in Chunks... Analysis will start automatically.');
             setPdfUrl(null);
 
-            const uploadId = 'upload_' + Date.now() + '_' + Math.random().toString(36).substring(7);
-            const CHUNK_SIZE = 500 * 1024; // 500KB chunks to strictly bypass NGINX 1MB limits
-            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-            
-            // Upload chunks
-            for (let i = 0; i < totalChunks; i++) {
-                const start = i * CHUNK_SIZE;
-                const end = Math.min(file.size, start + CHUNK_SIZE);
-                const chunk = file.slice(start, end);
-
-                const chunkForm = new FormData();
-                chunkForm.append('chunk', chunk, 'blob'); // Specify filename 'blob' to ensure it parses correctly
-                chunkForm.append('uploadId', uploadId);
-                chunkForm.append('chunkIndex', i);
-
-                await api.post('/upload/chunk', chunkForm, {
-                    timeout: 0
-                });
-                
-                // Update progress up to 90%
-                setUploadProgress(Math.round(((i + 1) / totalChunks) * 90));
-            }
-
-            // Finalize upload
+            // Finalize upload parameters
             const finalForm = new FormData();
             finalForm.append('school_id', selectedSchool);
             finalForm.append('teacher_id', selectedTeacher);
@@ -154,18 +131,20 @@ const VideoUpload = () => {
             finalForm.append('grade', grade);
             finalForm.append('section', section);
             
-            // Chunk metadata to merge on the backend
-            finalForm.append('uploadId', uploadId);
-            finalForm.append('totalChunks', totalChunks);
-            finalForm.append('originalVideoName', file.name);
+            // Append the direct original video file
+            finalForm.append('video', file);
 
             if (readingMaterialFile) finalForm.append('readingMaterial', readingMaterialFile);
             if (lessonPlanFile) finalForm.append('lessonPlan', lessonPlanFile);
 
-            setMessage('Merging Video on Server...');
+            setMessage('Uploading Video to Server...');
 
             const res = await api.post('/upload', finalForm, {
-                timeout: 0
+                timeout: 0,
+                onUploadProgress: (progressEvent) => {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setUploadProgress(percentCompleted);
+                }
             });
             
             setUploadProgress(100);

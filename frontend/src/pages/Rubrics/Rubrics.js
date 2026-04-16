@@ -16,17 +16,40 @@ const Rubrics = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    
+    // Schools & Roles
+    const session = JSON.parse(localStorage.getItem('user')) || {};
+    const isSuperAdmin = (session.role || '').toLowerCase().replace(/[\s_]/g, '') === 'superadmin';
+    const userSchoolId = session.school_id;
+    const [schools, setSchools] = useState([]);
+    const [filterSchoolId, setFilterSchoolId] = useState(isSuperAdmin ? '' : (userSchoolId || ''));
 
     // Form state
     const [file, setFile] = useState(null);
     const [grade, setGrade] = useState('');
+    const [formSchoolId, setFormSchoolId] = useState('');
     const [isEditing, setIsEditing] = useState(false);
 
     useEffect(() => {
-        fetchRubrics();
-    }, []);
+        if (isSuperAdmin) {
+            loadSchools();
+        }
+    }, [isSuperAdmin]);
 
-    const filterRubrics = useCallback(() => {
+    useEffect(() => {
+        fetchRubrics();
+    }, [filterSchoolId]);
+
+    const loadSchools = async () => {
+        try {
+            const { data } = await api.get('/schools');
+            setSchools(data.data || []);
+        } catch (err) {
+            console.error("Failed to load schools", err);
+        }
+    };
+
+    const filterRubricsList = useCallback(() => {
         let filtered = rubrics;
         if (searchTerm) {
             filtered = filtered.filter(rubric =>
@@ -39,13 +62,14 @@ const Rubrics = () => {
     }, [rubrics, searchTerm]);
 
     useEffect(() => {
-        filterRubrics();
-    }, [filterRubrics]);
+        filterRubricsList();
+    }, [filterRubricsList]);
 
     const fetchRubrics = async () => {
         try {
             setIsLoading(true);
-            const { data } = await api.get('/rubrics');
+            const url = filterSchoolId ? `/rubrics?school_id=${filterSchoolId}` : '/rubrics';
+            const { data } = await api.get(url);
             setRubrics(data.data || []);
         } catch (err) {
             console.error("Failed to load rubrics", err);
@@ -64,15 +88,18 @@ const Rubrics = () => {
 
     const handleUpload = async (e) => {
         e.preventDefault();
+        
+        const targetSchoolId = isSuperAdmin ? formSchoolId : userSchoolId;
 
-        if (!file || !grade.trim()) {
-            toast.error("Please select a grade and a file.");
+        if (!file || !grade.trim() || !targetSchoolId) {
+            toast.error("Please select a school, a grade, and a file.");
             return;
         }
 
         const formData = new FormData();
         formData.append('file', file);
         formData.append('grade', grade.trim());
+        formData.append('school_id', targetSchoolId);
 
         try {
             setIsUploading(true);
@@ -105,6 +132,7 @@ const Rubrics = () => {
 
     const handleEdit = (rubric) => {
         setGrade(rubric.grade);
+        setFormSchoolId(rubric.school_id);
         setFile(null);
         setIsEditing(true);
         setShowModal(true);
@@ -112,6 +140,7 @@ const Rubrics = () => {
 
     const resetForm = () => {
         setGrade('');
+        setFormSchoolId('');
         setFile(null);
         setIsEditing(false);
         setShowModal(false);
@@ -122,16 +151,16 @@ const Rubrics = () => {
             <div className="rubrics-list-header">
                 <div className="header-content">
                     <h1 className="page-title">Rubrics Management</h1>
-                    <p className="page-subtitle">Upload and manage grading rubrics per Grade (Word, Excel, PDF)</p>
+                    <p className="page-subtitle">Upload and manage grading rubrics per School & Grade</p>
                 </div>
-                <button className="btn-add-rubric" onClick={() => setShowModal(true)}>
+                <button className="btn-add-rubric" onClick={() => { setFormSchoolId(filterSchoolId); setShowModal(true); }}>
                     <i className="fa-solid fa-plus btn-icon"></i>
                     Add Rubric
                 </button>
             </div>
 
-            <div className="filters-section">
-                <div className="search-box">
+            <div className="filters-section" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <div className="search-box" style={{ flex: 1 }}>
                     <i className="fa-solid fa-magnifying-glass search-icon"></i>
                     <input
                         type="text"
@@ -141,6 +170,19 @@ const Rubrics = () => {
                         className="search-input"
                     />
                 </div>
+                {isSuperAdmin && (
+                    <select 
+                        className="search-input" 
+                        style={{ paddingLeft: '1rem', flex: 0.5 }}
+                        value={filterSchoolId}
+                        onChange={(e) => setFilterSchoolId(e.target.value)}
+                    >
+                        <option value="">All Schools</option>
+                        {schools.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                    </select>
+                )}
             </div>
 
             <div className="table-wrapper">
@@ -148,6 +190,7 @@ const Rubrics = () => {
                     <thead>
                         <tr>
                             <th>Grade</th>
+                            {isSuperAdmin && <th>School</th>}
                             <th>File Name</th>
                             <th>Type</th>
                             <th>Uploaded On</th>
@@ -157,47 +200,53 @@ const Rubrics = () => {
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan="5" className="text-center" style={{ padding: '2rem', color: '#64748b' }}>
+                                <td colSpan={isSuperAdmin ? "6" : "5"} className="text-center" style={{ padding: '2rem', color: '#64748b' }}>
                                     <i className="fa-solid fa-spinner fa-spin"></i> Loading rubrics...
                                 </td>
                             </tr>
                         ) : filteredRubrics.length === 0 ? (
                             <tr>
-                                <td colSpan="5" className="text-center" style={{ padding: '2rem', color: '#64748b' }}>
+                                <td colSpan={isSuperAdmin ? "6" : "5"} className="text-center" style={{ padding: '2rem', color: '#64748b' }}>
                                     No rubrics found. Click "Add Rubric" to upload one.
                                 </td>
                             </tr>
                         ) : (
-                            filteredRubrics.map(rubric => (
-                                <tr key={rubric.id}>
-                                    <td className="grade-cell">
-                                        <div className="name-icon">
-                                            <div className="r-icon"><i className="fa-solid fa-book-open"></i></div>
-                                            <div style={{ fontWeight: 'bold' }}>{rubric.grade}</div>
-                                        </div>
-                                    </td>
-                                    <td>{rubric.original_name}</td>
-                                    <td>
-                                        <span className={`file-type ${rubric.file_type}`}>
-                                            {rubric.file_type.toUpperCase()}
-                                        </span>
-                                    </td>
-                                    <td>{new Date(rubric.createdAt).toLocaleDateString()}</td>
-                                    <td>
-                                        <div className="action-buttons">
-                                            <a href={`${api.defaults.baseURL}${rubric.file_path}`} target="_blank" rel="noreferrer" className="btn-action view" title="View Document">
-                                                <i className="fa-solid fa-eye"></i>
-                                            </a>
-                                            <button onClick={() => handleEdit(rubric)} className="btn-action edit" title="Edit / Update">
-                                                <i className="fa-solid fa-pen-to-square"></i>
-                                            </button>
-                                            <button onClick={() => handleDelete(rubric.id)} className="btn-action delete" title="Delete">
-                                                <i className="fa-solid fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
+                            filteredRubrics.map(rubric => {
+                                const sc = schools.find(s => s.id === rubric.school_id);
+                                return (
+                                    <tr key={rubric.id}>
+                                        <td className="grade-cell">
+                                            <div className="name-icon">
+                                                <div className="r-icon"><i className="fa-solid fa-book-open"></i></div>
+                                                <div style={{ fontWeight: 'bold' }}>{rubric.grade}</div>
+                                            </div>
+                                        </td>
+                                        {isSuperAdmin && (
+                                            <td>{sc ? sc.name : (rubric.school_id || 'Global')}</td>
+                                        )}
+                                        <td>{rubric.original_name}</td>
+                                        <td>
+                                            <span className={`file-type ${rubric.file_type}`}>
+                                                {rubric.file_type.toUpperCase()}
+                                            </span>
+                                        </td>
+                                        <td>{new Date(rubric.createdAt).toLocaleDateString()}</td>
+                                        <td>
+                                            <div className="action-buttons">
+                                                <a href={`${api.defaults.baseURL.replace('/api', '')}${rubric.file_path}`} target="_blank" rel="noreferrer" className="btn-action view" title="View Document">
+                                                    <i className="fa-solid fa-eye"></i>
+                                                </a>
+                                                <button onClick={() => handleEdit(rubric)} className="btn-action edit" title="Edit / Update">
+                                                    <i className="fa-solid fa-pen-to-square"></i>
+                                                </button>
+                                                <button onClick={() => handleDelete(rubric.id)} className="btn-action delete" title="Delete">
+                                                    <i className="fa-solid fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>
@@ -211,6 +260,24 @@ const Rubrics = () => {
                             <button className="modal-close" onClick={resetForm}><i className="fa-solid fa-xmark"></i></button>
                         </div>
                         <form onSubmit={handleUpload} className="rubric-form">
+                            {isSuperAdmin && (
+                                <div className="form-group-single">
+                                    <label>School <span className="required">*</span></label>
+                                    <select
+                                        value={formSchoolId}
+                                        onChange={(e) => setFormSchoolId(e.target.value)}
+                                        required
+                                        disabled={isEditing}
+                                        className={isEditing ? "disabled-input" : ""}
+                                    >
+                                        <option value="" disabled>Select School...</option>
+                                        {schools.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             <div className="form-group-single">
                                 <label>Grade / Category <span className="required">*</span></label>
                                 <select
@@ -250,7 +317,7 @@ const Rubrics = () => {
                             </div>
                             <div className="form-actions">
                                 <button type="button" className="btn-cancel" onClick={resetForm}>Cancel</button>
-                                <button type="submit" className="btn-submit" disabled={!file || !grade || isUploading}>
+                                <button type="submit" className="btn-submit" disabled={!file || !grade || (isSuperAdmin && !formSchoolId) || isUploading}>
                                     {isUploading ? (
                                         <><i className="fa-solid fa-spinner fa-spin"></i> {isEditing ? 'Updating...' : 'Uploading...'}</>
                                     ) : (

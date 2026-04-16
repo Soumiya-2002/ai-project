@@ -200,6 +200,7 @@ const uploadVideo = async (req, res) => {
                             let contextMeta = {
                                 facilitator: 'Unknown Teacher',
                                 school: 'Unknown School',
+                                school_id: req.body.school_id || null, // Include school_id for Rubric
                                 grade: lecture.grade || req.body.grade || 'N/A',
                                 section: lecture.section || req.body.section || 'N/A',
                                 subject: 'General',

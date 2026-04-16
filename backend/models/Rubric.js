@@ -12,6 +12,10 @@ const Rubric = sequelize.define('Rubric', {
         type: DataTypes.STRING,
         allowNull: false
     },
+    school_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     file_path: {
         type: DataTypes.STRING,
         allowNull: false

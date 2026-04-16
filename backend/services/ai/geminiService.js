@@ -52,12 +52,7 @@ const generateAnalysis = async (textInput, meta = {}, fileContext = {}) => {
     }
 
     const validModels = [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-flash-latest",
-        "gemini-2.5-pro",
-        "gemini-2.0-flash-lite",
-        "gemini-1.5-flash"
+        "gemini-2.5-pro"
     ];
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -89,14 +84,18 @@ const generateAnalysis = async (textInput, meta = {}, fileContext = {}) => {
            - Assign a score for each identified parameter based ONLY on the evidence from the recording.
            - If the user prompt defines a specific scoring scale (e.g., 1-5, or Yes/No), USE IT.
            - If no scale is defined, use a default 1-5 scale (1=Poor, 5=Excellent).
-        **CRITICAL INSTRUCTION: DATA COMPLETENESS & DEEP ANALYSIS**
-        - **DEEP & RIGOROUS ANALYSIS**: Do not provide brief comments. Perform an exceptionally detailed, deep, and rigorous analysis. For every parameter, explain *why* the score was given, cite specific examples verbatim from the recording, and offer actionable feedback.
-        - **FAIR, CRITICAL & REALISTIC SCORING**: Do not simply award full marks (e.g., 2/2, 5/5) just because the teacher merely mentioned or covered a topic. You must evaluate *how effectively* it was covered. Be a critical, objective observer. Properly distribute the scores (e.g., 1/2, 1.5/2, etc.) and deduct marks for areas of improvement like: speaking too fast, not checking for understanding from students, lack of genuine engagement, or minor teaching gaps. Award scores genuinely based on the true quality of the teaching session, and only give maximum points for genuinely excellent teaching.
-        - **EVALUATE EVERY SINGLE POINT**: You MUST extract and evaluate EVERY SINGLE point, question, or parameter listed in the provided Rubric. Do NOT skip any. If the rubric has 25 points, your JSON 'parameters' array MUST have 25 items.
-        - **Duration**: NEVER use "N/A". If you can't tell perfectly, estimate it based on the recording length or use "45m" as a standard default.
+        **CRITICAL INSTRUCTION: STRICT, DETERMINISTIC SCORING RULES**
+        - **NO RANDOM SCORES**: You must use a strictly deterministic 3-tier scoring logic for EVERY parameter unless the rubric specifies otherwise:
+             - **100% of the Max Score**: The teacher perfectly executed this parameter. The evidence is clear and undeniable.
+             - **50% of the Max Score**: The teacher attempted this, but it was flawed, incomplete, or partially effective.
+             - **0% (Zero)**: The teacher completely failed to address this or there is zero evidence of it.
+        - **Do not invent decimals or random fractions** (e.g., do not give 1.7 out of 2). Stick to the 0%, 50%, or 100% tiers (e.g., 0, 1.0, or 2.0). 
+        - **Evidence Based**: For every parameter, explain *why* the score was given with a concrete, verbatim example from the transcript/video. If you cannot find evidence, score it 0. Do not guess.
+        - **Evaluate Every Parameter**: You MUST evaluate EVERY SINGLE parameter listed in the provided Rubric. Do NOT skip any.
+        - **Duration**: NEVER use "N/A". If you can't tell, use "45m" as a standard default.
         - **Weight**: 
-            1. SCAN the User Provided Rubric for columns/text like "Weightage", "Weight", or "Percentage" next to each parameter.
-            2. If found, use that EXACT purely numeric value (e.g., if "20%", return "20". if "5 pits", return "5").
+            1. SCAN the User Provided Rubric for columns/text like "Weightage", "Weight" next to each parameter.
+            2. If found, use that EXACT purely numeric value.
             3. If NOT found, use default "1".
             4. NEVER leave as "N/A".
 
@@ -161,7 +160,10 @@ const generateAnalysis = async (textInput, meta = {}, fileContext = {}) => {
             console.log(`Attempting generation with model: ${modelName}...`);
             const model = genAI.getGenerativeModel({
                 model: modelName,
-                generationConfig: { responseMimeType: "application/json" }
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    temperature: 0.0 // STRICT 0.0 for accurate, consistent, non-random evaluations
+                }
             });
 
             const result = await model.generateContent(requestPayload);

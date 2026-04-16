@@ -35,7 +35,19 @@ class AiService {
                 } else if (['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].includes(grade)) {
                     mappedGrade = "Grade 9 to 12";
                 }
-                const rubric = await Rubric.findOne({ where: { grade: mappedGrade } });
+                
+                let whereClause = { grade: mappedGrade };
+                if (meta && meta.school_id) {
+                    whereClause.school_id = meta.school_id;
+                }
+                
+                let rubric = await Rubric.findOne({ where: whereClause, order: [['createdAt', 'DESC']] });
+                
+                // Fallback to a global rubric if a school-specific one does not exist
+                if (!rubric) {
+                     rubric = await Rubric.findOne({ where: { grade: mappedGrade, school_id: null }, order: [['createdAt', 'DESC']] });
+                }
+
                 if (rubric && rubric.content) {
                     usedRubric = rubric.content;
                     usedRubricName = rubric.original_name;

@@ -82,7 +82,12 @@ const extractText = async (file) => {
 
 const getRubrics = async (req, res) => {
     try {
-        const rubrics = await Rubric.findAll({ order: [['createdAt', 'DESC']] });
+        const { school_id } = req.query;
+        let whereClause = {};
+        if (school_id) {
+            whereClause.school_id = school_id;
+        }
+        const rubrics = await Rubric.findAll({ where: whereClause, order: [['createdAt', 'DESC']] });
         res.json({ data: rubrics });
     } catch (err) {
         console.error(err);
@@ -100,27 +105,21 @@ const uploadRubric = async (req, res) => {
             return res.status(400).json({ message: 'No file selected!' });
         }
 
-        const { grade } = req.body;
-        if (!grade) {
-            // Delete uploaded file if grade is missing
+        const { grade, school_id } = req.body;
+        if (!grade || !school_id) {
+            // Delete uploaded file if fields are missing
             fs.unlinkSync(req.file.path);
-            return res.status(400).json({ message: 'Grade is required!' });
+            return res.status(400).json({ message: 'Grade and School are required!' });
         }
 
         try {
-            // First check if a rubric already exists for this grade to replace it or allow multiple?
-            // Usually, there's one rubric per grade. We'll simply create or replace? Let's just create new, or the logic could be up to the user. We'll find existing and replace it to keep the DB clean.
-            let existingRubric = await Rubric.findOne({ where: { grade: grade } });
+            // Check if rubric exists for this grade in this specific school
+            let existingRubric = await Rubric.findOne({ where: { grade: grade, school_id: school_id } });
 
             const content = await extractText(req.file);
             const file_type = path.extname(req.file.originalname).substring(1);
 
             if (existingRubric) {
-                // We no longer remove the old file, so that older AI Reports can still link to the exact rubric version they used.
-                // if (fs.existsSync(path.join(__dirname, '..', existingRubric.file_path))) {
-                //     fs.unlinkSync(path.join(__dirname, '..', existingRubric.file_path));
-                // }
-
                 existingRubric.file_path = `/uploads/${req.file.filename}`;
                 existingRubric.original_name = req.file.originalname;
                 existingRubric.file_type = file_type;
@@ -131,6 +130,7 @@ const uploadRubric = async (req, res) => {
             } else {
                 const newRubric = await Rubric.create({
                     grade: grade,
+                    school_id: school_id,
                     file_path: `/uploads/${req.file.filename}`,
                     original_name: req.file.originalname,
                     file_type: file_type,

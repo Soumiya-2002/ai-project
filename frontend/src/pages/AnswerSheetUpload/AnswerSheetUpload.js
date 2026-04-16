@@ -44,7 +44,7 @@ const AnswerSheetUpload = () => {
                 setExtractedText(res.data.text);
                 if (res.data.pdfUrl) {
                     setPdfUrl(res.data.pdfUrl);
-                    
+
                     const newItem = {
                         id: Date.now(),
                         fileName: file.name,
@@ -68,7 +68,7 @@ const AnswerSheetUpload = () => {
     };
 
     const handleDownloadPdf = () => {
-        const baseUrl = api.defaults.baseURL || 'http://localhost:5001';
+        const baseUrl = api.defaults.baseURL ? api.defaults.baseURL.replace('/api', '') : 'http://localhost:5001';
         window.open(`${baseUrl}${pdfUrl}`, '_blank');
     };
 
@@ -136,17 +136,17 @@ const AnswerSheetUpload = () => {
                             </button>
                         </h3>
                         <div style={{ background: '#f3f4f6', padding: '0.5rem', borderRadius: '8px', height: '600px' }}>
-                            <iframe 
-                                src={`${api.defaults.baseURL || 'http://localhost:5001'}${pdfUrl}`} 
-                                width="100%" 
-                                height="100%" 
-                                style={{ border: 'none', borderRadius: '4px' }} 
+                            <iframe
+                                src={`${api.defaults.baseURL ? api.defaults.baseURL.replace('/api', '') : 'http://localhost:5001'}${pdfUrl}`}
+                                width="100%"
+                                height="100%"
+                                style={{ border: 'none', borderRadius: '4px' }}
                                 title="Generated PDF"
                             />
                         </div>
                     </div>
                 )}
-                
+
                 {/* History Section */}
                 {history.length > 0 && (
                     <div style={{ marginTop: '3rem', borderTop: '1px solid #e5e7eb', paddingTop: '2rem' }}>
@@ -162,17 +162,17 @@ const AnswerSheetUpload = () => {
                                         <small style={{ color: '#6b7280' }}>{item.date}</small>
                                     </div>
                                     <div style={{ display: 'flex', gap: '1rem' }}>
-                                        <a 
-                                            href={`${api.defaults.baseURL || 'http://localhost:5001'}${item.originalUrl}`} 
-                                            target="_blank" 
+                                        <a
+                                            href={`${api.defaults.baseURL ? api.defaults.baseURL.replace('/api', '') : 'http://localhost:5001'}${item.originalUrl}`}
+                                            target="_blank"
                                             rel="noreferrer"
                                             style={{ padding: '0.5rem 1rem', background: '#f3f4f6', color: '#374151', textDecoration: 'none', borderRadius: '6px', fontSize: '0.9rem', border: '1px solid #d1d5db', display: 'inline-flex', alignItems: 'center' }}
                                         >
                                             <i className="fa-solid fa-image" style={{ marginRight: '6px' }}></i> Original File
                                         </a>
-                                        <a 
-                                            href={`${api.defaults.baseURL || 'http://localhost:5001'}${item.pdfUrl}`} 
-                                            target="_blank" 
+                                        <a
+                                            href={`${api.defaults.baseURL ? api.defaults.baseURL.replace('/api', '') : 'http://localhost:5001'}${item.pdfUrl}`}
+                                            target="_blank"
                                             rel="noreferrer"
                                             style={{ padding: '0.5rem 1rem', background: '#2563eb', color: 'white', textDecoration: 'none', borderRadius: '6px', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center' }}
                                         >
