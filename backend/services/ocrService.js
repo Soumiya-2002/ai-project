@@ -14,8 +14,11 @@ const extractTextFromImage = async (filePath, mimeType) => {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-    // Based on your specific API Key's access, these are your valid vision models
+    // Prioritize 'pro' models since they have far superior reasoning capabilities 
+    // for severely degraded/bad handwriting and complex humanized structuring.
     const validModels = [
+        "gemini-2.5-pro",
+        "gemini-1.5-pro",
         "gemini-2.5-flash",
         "gemini-2.0-flash"
     ];
@@ -29,19 +32,20 @@ const extractTextFromImage = async (filePath, mimeType) => {
 
     for (const modelName of validModels) {
         try {
-            console.log(`Attempting Gemini Vision extraction with model: ${modelName}...`);
+            console.log(`Attempting Gemini Vision extraction with high-tier model: ${modelName}...`);
             const model = genAI.getGenerativeModel({ model: modelName });
 
-            const prompt = `Transcribe ALL handwritten text in this document EXACTLY as the student wrote it. Do not auto-correct spelling or grammar mistakes made by the student. 
+            const prompt = `You are an expert human transcriber with perfect handwriting recognition skills. Transcribe ALL handwritten text in this document highly accurately and naturally. 
+
 CRITICAL INSTRUCTIONS:
-1. VERBATIM EXTRACTION: Output exactly the letters and words the student wrote. If a word is misspelled, preserve the misspelling. DO NOT add extra text or fix mistakes.
-2. HUMAN-LIKE REASONING FOR BAD HANDWRITING: Read the document like a human teacher would. Use logical context to identify list items (e.g., "i)", "ii)", "iii)", "a)", "b)"). NEVER output garbage symbols like "!p)", "i!q)", "i!r)" at the start of sentences. If a red checkmark crosses Roman numerals, it mathematically creates shapes that look like '!', 'p', 'q', or 'r' to OCR. YOU MUST autocorrect these visual glitches back to standard Roman numerals: 'i)', 'ii)', 'iii)'.
-3. IGNORE TEACHER CHECKMARKS AS TEXT: The page has large red checkmarks/slashes drawn across the answers. DO NOT interpret these red lines or their endpoints as text characters! Specifically, DO NOT output trailing single quotes ('), commas, or random letters (like '<', 'X', 'S') at the end of lines caused by these red marks. Treat the red checkmarks/slashes as invisible overlays.
-4. IGNORE NOISE & STRAY MARKS: Do not transcribe blank signature lines, underlines, page borders, dirt, or stray dots as punctuation.
-5. NO MARKDOWN LISTS OR DUPLICATE NUMBERS: Do not interpret the lines as a numbered list. For example, if a line starts with "1) b. Noon", output exactly "1) b. Noon". Do NOT output "1) 1) b. Noon". Never add artificial numbering.
-6. TEACHER MARKS & NUMBERS: Extract numerical scores (like '1/2', '1') inline where they appear. Ignore the giant physical checkmarks.
-7. SPATIAL LAYOUT & BLANK LINES (CRITICAL): Preserve the exact vertical spacing! If the student leaves a blank line between two answers, you MUST output a blank line (press Enter twice). If they indent "i)" and "ii)", you must also indent them. It must visually reflect the human readable answer sheet distances.
-8. If there are multiple pages, separate each page's text completely with the exact phrase '|||PAGE_BREAK|||' at the end of every page before starting the next.`;
+1. HUMANIZED & NATURAL FLOW: Read the document exactly as a human teacher intended. The output must be highly accurate, properly formatted, and visually pleasing.
+2. VERBATIM TEXT: Output exactly the letters and words the student wrote. If a word is misspelled, preserve the misspelling to maintain authenticity.
+3. INTELLIGENT REASONING FOR BAD HANDWRITING: Use deep contextual logic to piece together messy cursive or badly written characters. Recognize common numbering patterns (e.g., "1)", "2)", "a)", "i)", "ii)"). If a teacher's red pen overlaps and makes it look like"!p)", use your human-like reasoning to realize it's actually "i)". 
+4. IGNORE PENMARKS & NOISE: Completely ignore giant red checkmarks, slashes, cross-outs by the teacher, and stray dots. Treat them as invisible overlays. DO NOT insert weird punctuation like single quotes (') or random letters caused by intersecting ink.
+5. NO HALLUCINATION: Do NOT add artificial list numbers if the student didn't write them. Do NOT duplicate numbers (e.g. don't write "1) 1) b").
+6. SPATIAL LAYOUT & BLANK LINES: Preserve the exact structural spacing. If there is a paragraph break or a blank line between two separate answers, you MUST retain it exactly. Text alignment (indentation) should be human-readable.
+7. INLINE SCORE HANDLING: If you see numerical scores (like '1/2', '1') inline naturally, include them. 
+8. PAGE BREAK HANDLING: If there are multiple pages or distinct boundaries, strictly separate them using '|||PAGE_BREAK|||' at the very end of the page.`;
 
             const result = await model.generateContent([
                 prompt,

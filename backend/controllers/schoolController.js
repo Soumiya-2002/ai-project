@@ -41,6 +41,16 @@ const addSchool = async (req, res) => {
             student_count
         });
 
+        // Ensure a folder is created for the school in uploads directory
+        const fs = require('fs');
+        const path = require('path');
+        const schoolFolderName = name.replace(/[^a-zA-Z0-9]/g, '_');
+        const schoolDir = path.join(__dirname, '../uploads', schoolFolderName);
+        if (!fs.existsSync(schoolDir)) {
+            fs.mkdirSync(schoolDir, { recursive: true });
+            console.log(`Created directory for school: ${schoolDir}`);
+        }
+
         res.status(201).json(school);
     } catch (err) {
         console.error(err.message);
@@ -165,11 +175,46 @@ const getClasses = async (req, res) => {
     }
 };
 
+/**
+ * Retrieves a list of video files stored in the school's specific folder.
+ * This supports the workflow where large videos are uploaded via FTP.
+ */
+const getSchoolVideos = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const school = await School.findByPk(id);
+        
+        if (!school) {
+            return res.status(404).json({ message: 'School not found' });
+        }
+
+        const fs = require('fs');
+        const path = require('path');
+        const schoolFolderName = school.name.replace(/[^a-zA-Z0-9]/g, '_');
+        const schoolDir = path.join(__dirname, '../uploads', schoolFolderName);
+
+        let videos = [];
+        if (fs.existsSync(schoolDir)) {
+            const files = fs.readdirSync(schoolDir);
+            videos = files.filter(file => {
+                const ext = path.extname(file).toLowerCase();
+                return ['.mp4', '.mov', '.avi', '.mkv'].includes(ext);
+            });
+        }
+
+        res.json({ videos });
+    } catch (err) {
+        console.error('getSchoolVideos error:', err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
 module.exports = {
     addSchool,
     getSchools,
     updateSchool,
     deleteSchool,
     addClass,
-    getClasses
+    getClasses,
+    getSchoolVideos
 };

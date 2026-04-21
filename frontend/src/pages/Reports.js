@@ -18,6 +18,9 @@ const Reports = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
+    const session = JSON.parse(localStorage.getItem('user')) || {};
+    const isSuperAdmin = (session.role || '').toLowerCase().replace(/[\s_]/g, '') === 'superadmin';
+
     React.useEffect(() => {
         fetchLectures();
     }, []);
@@ -124,6 +127,20 @@ const Reports = () => {
         }
     };
 
+    const handleApproveReport = async (lectureId) => {
+        try {
+            await api.put(`/lectures/${lectureId}/approve`);
+            setLectures(prev => prev.map(l => l.id === lectureId ? { ...l, is_approved: true } : l));
+            if (selectedLecture && selectedLecture.id === lectureId) {
+                setSelectedLecture(prev => ({ ...prev, is_approved: true }));
+            }
+            alert('Report approved successfully!');
+        } catch (err) {
+            console.error('Failed to approve report:', err);
+            alert('Failed to approve report: ' + (err.response?.data?.message || err.message));
+        }
+    };
+
     return (
         <div>
             {/* <Navbar /> */}
@@ -177,6 +194,11 @@ const Reports = () => {
                                             <span className={`status-badge status-${l.status || 'pending'}`}>
                                                 {l.status === 'completed' ? 'View PDF' : l.status}
                                             </span>
+                                            {isSuperAdmin && l.status === 'completed' && (
+                                                <span style={{ fontSize: '0.7rem', color: l.is_approved ? '#10b981' : '#f59e0b', fontWeight: 'bold', display: 'block', marginTop: '4px' }}>
+                                                    {l.is_approved ? '✓ Approved' : '⏳ Pending'}
+                                                </span>
+                                            )}
                                         </li>
                                     ))
                                 )}
@@ -228,7 +250,20 @@ const Reports = () => {
                                             Lecture #{selectedLecture.id} • Class {selectedLecture.grade}-{selectedLecture.section}
                                         </p>
                                     </div>
-                                    <div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        {/* Approve Button for Super Admin */}
+                                        {isSuperAdmin && !selectedLecture.is_approved && selectedLecture.status === 'completed' && (
+                                            <button
+                                                onClick={() => handleApproveReport(selectedLecture.id)}
+                                                style={{
+                                                    background: '#10b981', color: 'white', border: 'none', borderRadius: '4px',
+                                                    padding: '0.5rem 1rem', fontSize: '0.9rem', cursor: 'pointer', fontWeight: 'bold'
+                                                }}
+                                            >
+                                                Approve
+                                            </button>
+                                        )}
+
                                         {/* Download Link (if Blob URL exists) */}
                                         {pdfBlobUrl && (
                                             <a

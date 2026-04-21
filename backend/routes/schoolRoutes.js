@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { addSchool, getSchools, updateSchool, deleteSchool, addClass, getClasses } = require('../controllers/schoolController');
+const { addSchool, getSchools, updateSchool, deleteSchool, addClass, getClasses, getSchoolVideos } = require('../controllers/schoolController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Validations can be added here
@@ -9,6 +9,7 @@ router.post('/', authMiddleware, addSchool);
 router.get('/', authMiddleware, getSchools);
 router.put('/:id', authMiddleware, updateSchool);
 router.delete('/:id', authMiddleware, deleteSchool);
+router.get('/:id/videos', authMiddleware, getSchoolVideos);
 
 router.post('/:school_id/classes', authMiddleware, addClass);
 router.get('/:school_id/classes', authMiddleware, getClasses);

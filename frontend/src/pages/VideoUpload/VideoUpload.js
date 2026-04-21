@@ -15,7 +15,9 @@ const VideoUpload = () => {
     const navigate = useNavigate();
     const [schools, setSchools] = useState([]);
     const [teachers, setTeachers] = useState([]);
-    const [file, setFile] = useState(null);
+    const [file, setFile] = useState(null); // Keep for legacy or if needed
+    const [folderVideos, setFolderVideos] = useState([]);
+    const [selectedFTPVideo, setSelectedFTPVideo] = useState('');
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -48,6 +50,7 @@ const VideoUpload = () => {
         } else if (userSchoolId) {
             setSelectedSchool(userSchoolId);
             loadTeachers(userSchoolId);
+            loadSchoolVideos(userSchoolId);
         }
     }, [isSuperAdmin, userSchoolId]);
 
@@ -57,6 +60,16 @@ const VideoUpload = () => {
             setSchools(data.data || []);
         } catch (err) {
             console.error("Failed to load schools", err);
+        }
+    };
+
+    const loadSchoolVideos = async (schoolId) => {
+        try {
+            const { data } = await api.get(`/schools/${schoolId}/videos`);
+            setFolderVideos(data.videos || []);
+        } catch (err) {
+            console.error("Failed to load school videos", err);
+            setFolderVideos([]);
         }
     };
 
@@ -82,10 +95,13 @@ const VideoUpload = () => {
         const schoolId = e.target.value;
         setSelectedSchool(schoolId);
         setSelectedTeacher('');
+        setSelectedFTPVideo('');
         if (schoolId) {
             loadTeachers(schoolId);
+            loadSchoolVideos(schoolId);
         } else {
             setTeachers([]);
+            setFolderVideos([]);
         }
     };
 
@@ -111,8 +127,8 @@ const VideoUpload = () => {
     const handleUpload = async (e) => {
         e.preventDefault();
 
-        if (!selectedSchool || !selectedTeacher || !selectedDate || !file || !grade || !section) {
-            alert("Please complete all steps, including Grade and Section.");
+        if (!selectedSchool || !selectedTeacher || !selectedDate || !selectedFTPVideo || !grade || !section) {
+            alert("Please complete all steps, including picking a Video from the folder.");
             return;
         }
 
@@ -130,14 +146,14 @@ const VideoUpload = () => {
             finalForm.append('lecture_number', lectureNumber);
             finalForm.append('grade', grade);
             finalForm.append('section', section);
-            
-            // Append the direct original video file
-            finalForm.append('video', file);
+
+            // Append the FTP video filename instead of file
+            finalForm.append('existingVideoFileName', selectedFTPVideo);
 
             if (readingMaterialFile) finalForm.append('readingMaterial', readingMaterialFile);
             if (lessonPlanFile) finalForm.append('lessonPlan', lessonPlanFile);
 
-            setMessage('Uploading Video to Server...');
+            setMessage('Sending processing request to Server...');
 
             const res = await api.post('/upload', finalForm, {
                 timeout: 0,
@@ -146,13 +162,13 @@ const VideoUpload = () => {
                     setUploadProgress(percentCompleted);
                 }
             });
-            
+
             setUploadProgress(100);
 
             if (res.data.status === 'processing' && res.data.lecture_id) {
                 // The backend received it and started background analysis
                 setIsLoading(false);
-                setFile(null);
+                setSelectedFTPVideo('');
                 setCompletedLectureId(res.data.lecture_id);
                 setShowSuccessModal(true);
             } else {
@@ -160,7 +176,7 @@ const VideoUpload = () => {
                 if (res.data.pdfReport) {
                     setPdfUrl(res.data.pdfReport);
                 }
-                setFile(null);
+                setSelectedFTPVideo('');
                 setIsLoading(false);
                 setShowSuccessModal(true);
             }
@@ -179,7 +195,7 @@ const VideoUpload = () => {
 
     const handleCloseModal = () => {
         setShowSuccessModal(false);
-        setMessage('Analysis Complete! You can start another upload.');
+        setMessage('Successfully Submitted! You can process another video.');
         // Reset form or other states if needed
     };
 
@@ -210,11 +226,11 @@ const VideoUpload = () => {
                 <div className="modal-overlay">
                     <div className="modal-content" style={{ textAlign: 'center', maxWidth: '500px' }}>
                         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
-                        <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#111', marginBottom: '1rem' }}>Upload Successful!</h2>
+                        <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#111', marginBottom: '1rem' }}>Successfully Submitted!</h2>
                         <p style={{ color: '#4b5563', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-                            Your video has been securely uploaded to the server.
+                            Your video processing request has been successfully submitted.
                         </p>
-                        <p style={{ color: '#0056b3', fontSize: '1rem', fontWeight: 'bold', marginBottom: '2rem' }}>
+                        {/* <p style={{ color: '#0056b3', fontSize: '1rem', fontWeight: 'bold', marginBottom: '2rem' }}>
                             The AI has started its analysis in the background. Please check the 'Reports' tab in 5 to 6 minutes.
                         </p>
                         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
@@ -248,7 +264,7 @@ const VideoUpload = () => {
                             >
                                 Close
                             </button>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
             )}
@@ -396,36 +412,43 @@ const VideoUpload = () => {
                             />
                         </div>
 
-                        {/* Step 4: Upload Video */}
-                        <div className="form-group" style={{ marginBottom: '2rem', opacity: selectedDate ? 1 : 0.5 }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Upload Video File</label>
-                            <input
-                                type="file"
-                                onChange={handleFileChange}
-                                accept="video/*"
-                                disabled={!selectedDate}
-                                style={{ width: '100%', padding: '0.8rem', border: '1px dashed #d1d5db', borderRadius: '8px' }}
+                        {/* Step 4: Select Video from FTP */}
+                        <div className="form-group" style={{ marginBottom: '2rem', opacity: selectedDate && selectedSchool ? 1 : 0.5 }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Select Video File (From School Folder)</label>
+                            <select
+                                value={selectedFTPVideo}
+                                onChange={(e) => setSelectedFTPVideo(e.target.value)}
+                                disabled={!selectedDate || !selectedSchool}
+                                style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
                                 required
-                            />
+                            >
+                                <option value="">-- Choose Video from Server FTP --</option>
+                                {folderVideos.map(vid => (
+                                    <option key={vid} value={vid}>{vid}</option>
+                                ))}
+                            </select>
+                            {folderVideos.length === 0 && selectedSchool && (
+                                <p style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: '0.5rem' }}>No videos found in this school's folder.</p>
+                            )}
                         </div>
 
                         <button
                             type="submit"
-                            disabled={!file}
+                            disabled={!selectedFTPVideo}
                             style={{
                                 width: '100%',
                                 padding: '1rem',
-                                background: file ? '#000000' : '#9ca3af',
+                                background: selectedFTPVideo ? '#000000' : '#9ca3af',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '8px',
                                 fontWeight: 'bold',
-                                cursor: file ? 'pointer' : 'not-allowed',
+                                cursor: selectedFTPVideo ? 'pointer' : 'not-allowed',
                                 fontSize: '1rem'
                             }}
                         >
                             <i className="fa-solid fa-cloud-arrow-up" style={{ marginRight: '8px' }}></i>
-                            Upload & Analyze
+                            Process AI Analysis
                         </button>
                     </form>
 

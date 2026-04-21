@@ -131,9 +131,50 @@ const uploadVideo = async (req, res) => {
                 }
             } else if (req.files && req.files.video) {
                 videoFileName = req.files.video[0].filename;
+            } else if (req.body.existingVideoFileName) {
+                videoFileName = req.body.existingVideoFileName;
             } else {
                 console.warn("No video file found in request");
                 return res.status(400).json({ message: 'No video selected!' });
+            }
+
+            // Move the file to a school-specific folder if school_id is provided and it's a new upload
+            let finalVideoRelPath = `/uploads/${videoFileName}`;
+            if (req.body.school_id) {
+                try {
+                    const { School } = require('../models');
+                    const school = await School.findByPk(req.body.school_id);
+                    if (school) {
+                        const schoolFolderName = school.name.replace(/[^a-zA-Z0-9]/g, '_');
+                        const schoolDir = path.join(__dirname, '../uploads', schoolFolderName);
+                        
+                        if (req.body.existingVideoFileName) {
+                            // Video already exists in the school's FTP folder, just construct the path
+                            finalVideoRelPath = `/uploads/${schoolFolderName}/${videoFileName}`;
+                            
+                            // Check if file actually exists just to be safe
+                            const exactPath = path.join(schoolDir, videoFileName);
+                            if (!fs.existsSync(exactPath)) {
+                                console.warn(`Selected FTP file not found: ${exactPath}`);
+                            }
+                        } else {
+                            // It's a new upload, we need to move it to the school folder
+                            if (!fs.existsSync(schoolDir)) {
+                                fs.mkdirSync(schoolDir, { recursive: true });
+                            }
+                            const oldPath = path.join(__dirname, '../uploads', videoFileName);
+                            const newVideoFileName = `${Date.now()}-${videoFileName}`; // prevent conflicts
+                            const newPath = path.join(schoolDir, newVideoFileName);
+                            if (fs.existsSync(oldPath)) {
+                                fs.renameSync(oldPath, newPath);
+                                finalVideoRelPath = `/uploads/${schoolFolderName}/${newVideoFileName}`;
+                            }
+                        }
+                    }
+                } catch (folderErr) {
+                    console.error("Failed to process video path/folder:", folderErr);
+                    // continue with default uploads path
+                }
             }
 
             try {
@@ -147,7 +188,8 @@ const uploadVideo = async (req, res) => {
                     //console.log("Updating existing lecture:", lecture_id);
                     lecture = await Lecture.findByPk(lecture_id);
                     if (lecture) {
-                        lecture.video_url = `/uploads/${videoFileName}`;
+                        // Use the new folder path
+                        lecture.video_url = finalVideoRelPath;
                         lecture.status = 'completed';
                         // Update grade/section if provided
                         if (req.body.grade) lecture.grade = req.body.grade;
@@ -161,7 +203,7 @@ const uploadVideo = async (req, res) => {
                         teacher_id, // User ID from Users table
                         date,
                         lecture_number: lecture_number || 1,
-                        video_url: `/uploads/${videoFileName}`,
+                        video_url: finalVideoRelPath,
                         grade: req.body.grade || null,
                         section: req.body.section || null,
                         status: 'completed'
@@ -178,7 +220,7 @@ const uploadVideo = async (req, res) => {
                 // Return immediate response to User so they don't wait 3-4 minutes
                 res.status(202).json({
                     message: 'Upload Successful! AI Analysis started in background.',
-                    file: `/uploads/${videoFileName}`,
+                    file: finalVideoRelPath,
                     lecture: lecture,
                     status: 'processing',
                     lecture_id: lecture.id

@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { scheduleLecture, getLectures, getLectureById } = require('../controllers/lectureController');
+const { scheduleLecture, getLectures, getLectureById, approveLecture } = require('../controllers/lectureController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 router.post('/', authMiddleware, scheduleLecture);
 router.get('/', authMiddleware, getLectures);
 router.get('/:id', authMiddleware, getLectureById);
+router.put('/:id/approve', authMiddleware, approveLecture);
 
 module.exports = router;

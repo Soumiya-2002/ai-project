@@ -48,6 +48,10 @@ const Lecture = sequelize.define('Lecture', {
         type: DataTypes.STRING,
         allowNull: true // Store "A", "B", "Rose", etc.
     },
+    is_approved: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
     status: {
         type: DataTypes.ENUM('scheduled', 'completed', 'cancelled', 'processing', 'failed'),
         defaultValue: 'scheduled'
