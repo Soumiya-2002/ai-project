@@ -23,6 +23,10 @@ const VideoUpload = () => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [pdfUrl, setPdfUrl] = useState(null);
 
+    // Rubrics Check State
+    const [schoolHasRubrics, setSchoolHasRubrics] = useState(true);
+    const [checkingRubrics, setCheckingRubrics] = useState(false);
+
     // Modal State
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [completedLectureId, setCompletedLectureId] = useState(null);
@@ -51,6 +55,7 @@ const VideoUpload = () => {
             setSelectedSchool(userSchoolId);
             loadTeachers(userSchoolId);
             loadSchoolVideos(userSchoolId);
+            checkSchoolRubrics(userSchoolId);
         }
     }, [isSuperAdmin, userSchoolId]);
 
@@ -70,6 +75,23 @@ const VideoUpload = () => {
         } catch (err) {
             console.error("Failed to load school videos", err);
             setFolderVideos([]);
+        }
+    };
+
+    const checkSchoolRubrics = async (schoolId) => {
+        try {
+            setCheckingRubrics(true);
+            const { data } = await api.get(`/rubrics?school_id=${schoolId}`);
+            if (data && data.data && data.data.length === 0) {
+                setSchoolHasRubrics(false);
+            } else {
+                setSchoolHasRubrics(true);
+            }
+        } catch (err) {
+            console.error("Failed to check rubrics", err);
+            setSchoolHasRubrics(true); // Default to true on error to avoid false positives
+        } finally {
+            setCheckingRubrics(false);
         }
     };
 
@@ -96,9 +118,11 @@ const VideoUpload = () => {
         setSelectedSchool(schoolId);
         setSelectedTeacher('');
         setSelectedFTPVideo('');
+        setSchoolHasRubrics(true);
         if (schoolId) {
             loadTeachers(schoolId);
             loadSchoolVideos(schoolId);
+            checkSchoolRubrics(schoolId);
         } else {
             setTeachers([]);
             setFolderVideos([]);
@@ -230,11 +254,8 @@ const VideoUpload = () => {
                         <p style={{ color: '#4b5563', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
                             Your video processing request has been successfully submitted.
                         </p>
-                        {/* <p style={{ color: '#0056b3', fontSize: '1rem', fontWeight: 'bold', marginBottom: '2rem' }}>
-                            The AI has started its analysis in the background. Please check the 'Reports' tab in 5 to 6 minutes.
-                        </p>
                         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                            <button
+                            {/* <button
                                 onClick={() => navigate('/reports')}
                                 style={{
                                     padding: '0.8rem 1.5rem',
@@ -248,7 +269,7 @@ const VideoUpload = () => {
                                 }}
                             >
                                 Go to Reports
-                            </button>
+                            </button> */}
                             <button
                                 onClick={handleCloseModal}
                                 style={{
@@ -264,7 +285,7 @@ const VideoUpload = () => {
                             >
                                 Close
                             </button>
-                        </div> */}
+                        </div>
                     </div>
                 </div>
             )}
@@ -302,6 +323,13 @@ const VideoUpload = () => {
                                     disabled
                                     style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db', background: '#f3f4f6' }}
                                 />
+                            )}
+
+                            {!schoolHasRubrics && selectedSchool && !checkingRubrics && (
+                                <div style={{ marginTop: '0.75rem', padding: '0.75rem', backgroundColor: '#fff3cd', color: '#856404', borderRadius: '8px', fontSize: '0.9rem', border: '1px solid #ffeeba' }}>
+                                    <i className="fa-solid fa-circle-exclamation" style={{ marginRight: '8px' }}></i>
+                                    Please add your rubrics, otherwise we will use the default rubrics.
+                                </div>
                             )}
                         </div>
 

@@ -351,6 +351,33 @@ const SchoolList = () => {
                                     <input type="number" name="studentCount" value={formData.studentCount} onChange={handleInputChange} />
                                 </div>
                             </div>
+
+                            {editingSchool !== null && formData.name && (
+                                <div className="form-group-single" style={{ marginBottom: '1.5rem', width: '100%' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#374151' }}>FTP Upload Path (For Heavy Videos)</label>
+                                    <div style={{ display: 'flex', alignItems: 'center', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '4px', overflow: 'hidden' }}>
+                                        <input 
+                                            type="text" 
+                                            readOnly 
+                                            value={`/home/nitisolutions.com/lmsapi.nitisolutions.com/ai-project-backend/uploads/${formData.name.replace(/[^a-zA-Z0-9]/g, '_')}`} 
+                                            style={{ flex: 1, padding: '0.8rem', border: 'none', background: 'transparent', outline: 'none', color: '#4b5563', fontSize: '0.9rem' }}
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(`/home/nitisolutions.com/lmsapi.nitisolutions.com/ai-project-backend/uploads/${formData.name.replace(/[^a-zA-Z0-9]/g, '_')}`);
+                                                toast.info("Path copied to clipboard!");
+                                            }}
+                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 1rem', background: '#e5e7eb', borderLeft: '1px solid #d1d5db', height: '100%', cursor: 'pointer', border: 'none' }}
+                                            title="Copy Path"
+                                        >
+                                            <i className="fa-regular fa-copy"></i>
+                                        </button>
+                                    </div>
+                                    <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.4rem' }}>Share this exact server directory path with the school for uploading videos via FileZilla / FTP.</p>
+                                </div>
+                            )}
+
                             <div className="form-actions">
                                 <button type="button" className="btn-cancel" onClick={resetForm}>Cancel</button>
                                 <button type="submit" className="btn-submit">Save School</button>
