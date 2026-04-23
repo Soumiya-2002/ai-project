@@ -325,7 +325,7 @@ const VideoUpload = () => {
                                 />
                             )}
 
-                            {!schoolHasRubrics && selectedSchool && !checkingRubrics && (
+                            {!schoolHasRubrics && !checkingRubrics && (
                                 <div style={{ marginTop: '0.75rem', padding: '0.75rem', backgroundColor: '#fff3cd', color: '#856404', borderRadius: '8px', fontSize: '0.9rem', border: '1px solid #ffeeba' }}>
                                     <i className="fa-solid fa-circle-exclamation" style={{ marginRight: '8px' }}></i>
                                     Please add your rubrics, otherwise we will use the default rubrics.
