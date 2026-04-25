@@ -63,7 +63,7 @@ const getLectures = async (req, res) => {
 
         if (userRole === 'school_admin' || userRole === 'teacher') {
             whereClause.is_approved = true; // Only show approved reports to school roles
-            
+
             const currentUser = await User.findByPk(userId);
             if (currentUser && currentUser.school_id) {
                 // Get all users with teacher role from the same school
@@ -172,7 +172,7 @@ const approveLecture = async (req, res) => {
     try {
         const { id } = req.params;
         const lecture = await Lecture.findByPk(id);
-        
+
         if (!lecture) {
             return res.status(404).json({ message: 'Lecture not found' });
         }

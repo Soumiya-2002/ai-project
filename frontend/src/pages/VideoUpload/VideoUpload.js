@@ -6,10 +6,96 @@
  * and handles dispatching the Multipart Form Data to the backend. It also initiates polling
  * to wait for the background AI Analysis process to complete and render the final success modal.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import './VideoUpload.css';
+
+// Custom Searchable Dropdown Component
+const SearchableSelect = ({ options, value, onChange, placeholder, disabled }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const wrapperRef = useRef(null);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const filteredOptions = options.filter(opt => opt.toLowerCase().includes(search.toLowerCase()));
+
+    return (
+        <div ref={wrapperRef} style={{ position: 'relative', width: '100%', textAlign: 'left' }}>
+            <div 
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                style={{
+                    width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db', 
+                    background: disabled ? '#f3f4f6' : '#fff', cursor: disabled ? 'not-allowed' : 'pointer',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    opacity: disabled ? 0.7 : 1, textAlign: 'left'
+                }}
+            >
+                <span style={{ color: value ? '#000' : '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>
+                    {value || placeholder}
+                </span>
+                <i className={`fa-solid fa-chevron-${isOpen ? 'up' : 'down'}`} style={{ color: '#6b7280', fontSize: '0.8rem' }}></i>
+            </div>
+
+            {isOpen && (
+                <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+                    background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px', 
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '250px', 
+                    display: 'flex', flexDirection: 'column'
+                }}>
+                    <div style={{ padding: '8px', borderBottom: '1px solid #e5e7eb' }}>
+                        <input 
+                            type="text" 
+                            autoFocus
+                            placeholder="Type to search..." 
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            style={{ 
+                                width: '100%', padding: '0.5rem', borderRadius: '6px', 
+                                border: '1px solid #d1d5db', outline: 'none', fontSize: '0.9rem'
+                            }}
+                        />
+                    </div>
+                    <div style={{ overflowY: 'auto', flex: 1 }}>
+                        {filteredOptions.length === 0 ? (
+                            <div style={{ padding: '0.8rem', color: '#6b7280', textAlign: 'center', fontSize: '0.9rem' }}>No matches found</div>
+                        ) : (
+                            filteredOptions.map(opt => (
+                                <div 
+                                    key={opt}
+                                    onClick={() => {
+                                        onChange(opt);
+                                        setIsOpen(false);
+                                        setSearch('');
+                                    }}
+                                    style={{
+                                        padding: '0.8rem', cursor: 'pointer', borderBottom: '1px solid #f3f4f6',
+                                        background: value === opt ? '#f3f4f6' : '#fff', fontSize: '0.9rem',
+                                        textAlign: 'left'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = value === opt ? '#f3f4f6' : '#fff'}
+                                >
+                                    {opt}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const VideoUpload = () => {
     const navigate = useNavigate();
@@ -153,6 +239,11 @@ const VideoUpload = () => {
 
         if (!selectedSchool || !selectedTeacher || !selectedDate || !selectedFTPVideo || !grade || !section) {
             alert("Please complete all steps, including picking a Video from the folder.");
+            return;
+        }
+        
+        if (!folderVideos.includes(selectedFTPVideo)) {
+            alert("Please select a valid video from the list.");
             return;
         }
 
@@ -443,18 +534,13 @@ const VideoUpload = () => {
                         {/* Step 4: Select Video from FTP */}
                         <div className="form-group" style={{ marginBottom: '2rem', opacity: selectedDate && selectedSchool ? 1 : 0.5 }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Select Video File (From School Folder)</label>
-                            <select
+                            <SearchableSelect
+                                options={folderVideos}
                                 value={selectedFTPVideo}
-                                onChange={(e) => setSelectedFTPVideo(e.target.value)}
+                                onChange={setSelectedFTPVideo}
                                 disabled={!selectedDate || !selectedSchool}
-                                style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #d1d5db' }}
-                                required
-                            >
-                                <option value="">-- Choose Video from Server FTP --</option>
-                                {folderVideos.map(vid => (
-                                    <option key={vid} value={vid}>{vid}</option>
-                                ))}
-                            </select>
+                                placeholder="-- Choose Video from Server FTP --"
+                            />
                             {folderVideos.length === 0 && selectedSchool && (
                                 <p style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: '0.5rem' }}>No videos found in this school's folder.</p>
                             )}

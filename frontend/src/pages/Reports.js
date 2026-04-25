@@ -77,8 +77,9 @@ const Reports = () => {
         const teacherMatch = (l.Teacher?.name || '').toLowerCase().includes(term);
         const gradeMatch = (l.grade || '').toLowerCase().includes(term);
         const sectionMatch = (l.section || '').toLowerCase().includes(term);
+        const schoolMatch = (l.Teacher?.School?.name || '').toLowerCase().includes(term);
 
-        return idMatch || teacherMatch || gradeMatch || sectionMatch;
+        return idMatch || teacherMatch || gradeMatch || sectionMatch || schoolMatch;
     });
 
     // Pagination Logic
@@ -160,7 +161,7 @@ const Reports = () => {
                             <input
                                 type="text"
                                 className="search-input"
-                                placeholder="Search Teacher, ID, Grade, Section..."
+                                placeholder="Search School, Teacher, ID, Grade..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -186,6 +187,10 @@ const Reports = () => {
                                                     <span>#{l.id}</span>
                                                     <span>•</span>
                                                     <span>{l.grade ? `Class ${l.grade}-${l.section}` : 'General'}</span>
+                                                </div>
+                                                <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>
+                                                    <i className="fa-solid fa-school" style={{ marginRight: '4px' }}></i>
+                                                    {l.Teacher?.School?.name || 'No School Associated'}
                                                 </div>
                                                 <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '4px' }}>
                                                     {l.date}

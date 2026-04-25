@@ -28,13 +28,13 @@ const getDashboardStats = async (req, res) => {
                 schoolFilter = { where: { id: schoolId } };
                 teacherFilter = { where: { school_id: schoolId } };
 
-                // For lectures, filter by teachers from the same school
-                const schoolTeachers = await Teacher.findAll({
+                // For lectures, filter by users from the same school and only consider approved ones
+                const schoolUsers = await User.findAll({
                     where: { school_id: schoolId },
                     attributes: ['id']
                 });
-                const teacherIds = schoolTeachers.map(t => t.id);
-                lectureFilter = { where: { teacher_id: teacherIds } };
+                const teacherIds = schoolUsers.map(t => t.id);
+                lectureFilter = { where: { teacher_id: teacherIds, is_approved: true } };
             }
         }
 
