@@ -85,6 +85,9 @@ const createUser = async (req, res) => {
         const userRole = req.user?.role;
         const userId = req.user?.id;
         if (userRole === 'school_admin') {
+            if (role === 'super_admin') {
+                return res.status(403).json({ message: 'School Admins cannot create Super Admins' });
+            }
             const currentUser = await User.findByPk(userId);
             if (currentUser && currentUser.school_id && school_id != currentUser.school_id) {
                 return res.status(403).json({ message: 'You can only create users for your own school' });
@@ -124,6 +127,10 @@ const updateUser = async (req, res) => {
         const updateData = { name, email };
 
         if (role) {
+            if (req.user?.role === 'school_admin' && role === 'super_admin') {
+                return res.status(403).json({ message: 'School Admins cannot promote users to Super Admin' });
+            }
+
             const roleRecord = await Role.findOne({ where: { name: role } });
             if (roleRecord) {
                 updateData.role_id = roleRecord.id;

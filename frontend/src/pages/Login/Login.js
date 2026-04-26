@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import api from "../../api/axios";
-import logo from '../../assets/logo.png';
+import logo from '../../assets/ED-EQUITY.avif';
 import './Login.css';
 
 // Validation helpers
@@ -70,8 +70,8 @@ const Login = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <div className="logo-container" style={{ marginBottom: '1.5rem' }}>
-            <img src={logo} alt="NITI Solutions" style={{ height: '70px', objectFit: 'contain' }} />
+          <div className="logo-container">
+            <img src={logo} alt="NITI Solutions" />
           </div>
           <h1>Welcome Back</h1>
           <p className="subtitle">Sign in to your account</p>

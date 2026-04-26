@@ -24,6 +24,9 @@ const UserList = () => {
         school_id: ''
     });
 
+    const session = JSON.parse(localStorage.getItem('user')) || {};
+    const currentUserRole = (session.role || '').toLowerCase().replace(/[\s_]/g, '');
+
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const limit = 10;
@@ -203,7 +206,9 @@ const UserList = () => {
                                     <label>Role</label>
                                     <select name="role" value={formData.role} onChange={handleInputChange}>
                                         <option value="school_admin">School Admin</option>
-                                        <option value="super_admin">Super Admin</option>
+                                        {currentUserRole === 'superadmin' && (
+                                            <option value="super_admin">Super Admin</option>
+                                        )}
                                         <option value="teacher">Teacher</option>
                                     </select>
                                 </div>

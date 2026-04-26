@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import logo from '../../assets/logo.png';
+import logo from '../../assets/ED-EQUITY.avif';
 import './AdminLayout.css';
 
 const AdminLayout = () => {
@@ -118,9 +118,9 @@ const AdminLayout = () => {
                                 src={logo}
                                 alt="NITI Solutions"
                                 style={{
-                                    height: '32px',
+                                    height: '48px',
                                     objectFit: 'contain',
-                                    filter: 'brightness(0) invert(1)'
+                                    transition: 'transform 0.3s ease',
                                 }}
                             />
                         </div>
