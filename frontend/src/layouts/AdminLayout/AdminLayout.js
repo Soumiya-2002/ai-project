@@ -103,7 +103,9 @@ const AdminLayout = () => {
 
     const handleLogout = () => {
         if (window.confirm('Are you sure you want to logout?')) {
-            localStorage.removeItem('session'); // Clear session
+            localStorage.removeItem('session');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             navigate('/');
         }
     };

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { connectDB, syncDatabase } = require('./models');
+const { connectDB: connectLessonPlanDB, syncDatabase: syncLessonPlanDatabase } = require('./lessonPlanModels');
 const authRoutes = require('./routes/authRoutes');
 const schoolRoutes = require('./routes/schoolRoutes');
 const lectureRoutes = require('./routes/lectureRoutes');
@@ -29,8 +30,20 @@ app.use((req, res, next) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/schools', schoolRoutes);
-app.use('/api/teachers', require('./routes/teacherRoutes'));
+app.use('/api/lesson-plan-auth', require('./routes/lessonPlanAuthRoutes'));
+
+// Lesson Plan Routes
+app.use('/api/lesson-plan-schools', require('./routes/lessonPlanSchoolRoutes'));
+app.use('/api/lesson-plan-teachers', require('./routes/lessonPlanTeacherRoutes'));
+app.use('/api/lesson-plan-users', require('./routes/lessonPlanUserRoutes'));
+app.use('/api/lesson-plan-lectures', require('./routes/lessonPlanLectureRoutes'));
+app.use('/api/lesson-plan-upload', require('./routes/lessonPlanUploadRoutes'));
+app.use('/api/lesson-plan-analysis', require('./routes/lessonPlanAnalysisRoutes'));
+app.use('/api/lesson-plan-dashboard', require('./routes/lessonPlanDashboardRoutes'));
+app.use('/api/lesson-plan-rubrics', require('./routes/lessonPlanRubricRoutes'));
+
 app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/teachers', require('./routes/teacherRoutes'));
 app.use('/api/lectures', lectureRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/analysis', analysisRoutes);
@@ -44,6 +57,8 @@ app.get('/api', (req, res) => {
 const startServer = async () => {
     await connectDB();
     await syncDatabase();
+    await connectLessonPlanDB();
+    await syncLessonPlanDatabase();
 
     const server = app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);

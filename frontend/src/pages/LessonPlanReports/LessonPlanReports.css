@@ -1,0 +1,235 @@
+/* Reports.css - Modern Dashboard Styling */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.reports-container {
+    min-height: 100vh;
+    background-color: #f3f4f6;
+    font-family: 'Inter', sans-serif;
+    color: #1f2937;
+    padding: 0;
+}
+
+@media (max-width: 768px) {
+    .reports-container {
+        padding: 1rem;
+    }
+}
+
+/* Header */
+.reports-header {
+    margin-bottom: 2rem;
+}
+
+.reports-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.reports-subtitle {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+/* Main Grid Layout */
+.reports-grid {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 1.5rem;
+    align-items: stretch; /* Stretch to fill height */
+    height: calc(100vh - 120px);
+    overflow: hidden; /* Prevent body scroll if grid scrolls */
+}
+
+@media (max-width: 1024px) {
+    .reports-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+    }
+}
+
+/* Sidebar / Lecture List Panel */
+.lectures-panel {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+    height: 100%; /* Fill grid cell */
+    display: flex;
+    flex-direction: column;
+}
+
+.lectures-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.lecture-item {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.lecture-item:hover {
+    background-color: #f9fafb;
+}
+
+.lecture-item.active {
+    background-color: #eff6ff;
+    border-left: 4px solid #3b82f6;
+}
+
+.lecture-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.lecture-meta {
+    font-size: 0.8rem;
+    color: #6b7280;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* Status Badge */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.status-completed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-pending, .status-processing {
+    background: #fff7ed;
+    color: #ea580c;
+}
+
+/* Search Bar */
+.search-container {
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.search-input {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Report Content Panel (PDF Viewer) */
+.report-content-panel {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Empty State */
+.empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    text-align: center;
+    padding: 2rem;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.6;
+}
+
+/* Buttons */
+.btn-primary {
+    background: #111827;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-primary:hover {
+    background: #374151;
+}
+
+/* Pagination */
+.pagination-controls {
+    padding: 1rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f9fafb;
+}
+
+.pagination-btn {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #e5e7eb;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #374151;
+    transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    font-size: 0.875rem;
+    color: #6b7280;
+}

@@ -1,0 +1,142 @@
+import React, { useState } from 'react';
+import { toast } from 'react-toastify';
+import api from "../../api/axios";
+import logo from '../../assets/ED-EQUITY.avif';
+import './LessonPlanLogin.css';
+
+// Validation helpers
+/**
+ * Simple regex to ensure email formatting before API submission.
+ */
+const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+/**
+ * Enforces basic length requirements on the password field locally.
+ */
+const validatePassword = (password) => password.length >= 6;
+
+/**
+ * Login.js (Frontend)
+ * 
+ * The entry point for authentication.
+ * Captures email and password, sends them to the backend Auth API, 
+ * and stores the returned JWT token and user session data in localStorage.
+ * Depending on the role, users are then redirected to the Dashboard.
+ */
+const LessonPlanLogin = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  /**
+   * Orchestrates the primary authentication flow via POST /api/auth/login.
+   * Caches token data and triggers dashboard redirection upon success.
+   */
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!validateEmail(email)) return toast.error("Invalid Email");
+    if (!validatePassword(password))
+      return toast.error("Password must be 6+ characters");
+
+    setLoading(true);
+    try {
+      const { data } = await api.post('/lesson-plan-auth/login', { email, password });
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      // Legacy session format for Dashboard compatibility
+      const sessionData = {
+        token: data.token,
+        role: data.user.role,
+        user: data.user
+      };
+      localStorage.setItem("session", JSON.stringify(sessionData));
+
+      toast.success(`Welcome back, ${data.user.name}!`);
+
+      setTimeout(() => {
+        window.location.href = "/lesson-plan/dashboard";
+      }, 500);
+    } catch (error) {
+      console.error(error);
+      const msg = error.response?.data?.message || "Login Failed";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-container">
+      <div className="login-card">
+        <div className="login-header">
+          <div className="logo-container">
+            <img src={logo} alt="NITI Solutions" />
+          </div>
+          <h1>Lesson Plan Login</h1>
+          <p className="subtitle">Sign in to your account</p>
+        </div>
+
+        <form onSubmit={handleLogin} className="login-form">
+          <div className="form-group">
+            <label>Email Address</label>
+            <div className="input-wrapper">
+              {/* <i className="fa-solid fa-envelope"></i> */}
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@school.com"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Password</label>
+            <div className="input-wrapper">
+              {/* <i className="fa-solid fa-lock"></i> */}
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-options">
+            <label className="remember-me">
+              <input type="checkbox" />
+              <span>Remember me</span>
+            </label>
+          </div>
+
+          <button type="submit" className="btn-login" disabled={loading}>
+            {loading ? (
+              <>
+                <i className="fa-solid fa-spinner fa-spin"></i>
+                Signing in...
+              </>
+            ) : (
+              <>
+                <span>Sign In</span>
+                <i className="fa-solid fa-arrow-right"></i>
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="login-footer">
+          <p>
+            Don't have an account?
+            <span onClick={() => toast.info("Contact Super Admin for access")}> Request Access</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LessonPlanLogin;

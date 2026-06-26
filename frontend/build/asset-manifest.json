@@ -1,16 +1,16 @@
 {
   "files": {
     "main.css": "/static/css/main.a6339037.css",
-    "main.js": "/static/js/main.311eca1a.js",
+    "main.js": "/static/js/main.7ddecf80.js",
     "static/js/453.6edac766.chunk.js": "/static/js/453.6edac766.chunk.js",
     "static/media/ED-EQUITY.avif": "/static/media/ED-EQUITY.4c0b27e090d1788c2edc.avif",
     "index.html": "/index.html",
     "main.a6339037.css.map": "/static/css/main.a6339037.css.map",
-    "main.311eca1a.js.map": "/static/js/main.311eca1a.js.map",
+    "main.7ddecf80.js.map": "/static/js/main.7ddecf80.js.map",
     "453.6edac766.chunk.js.map": "/static/js/453.6edac766.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.a6339037.css",
-    "static/js/main.311eca1a.js"
+    "static/js/main.7ddecf80.js"
   ]
 }

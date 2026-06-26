@@ -1,0 +1,176 @@
+import React, { useState } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import logo from '../../assets/ED-EQUITY.avif';
+import './LessonPlanAdminLayout.css';
+
+const LessonPlanAdminLayout = () => {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    // Get user role with fallbacks
+    const session = JSON.parse(localStorage.getItem('user')) || {};
+    let rawRole = session.role || 'school_admin';
+
+    // Normalize: lowercase, replace spaces/underscores with empty string for loose comparison
+    // e.g., "Super Admin", "super_admin", "SUPER_ADMIN" -> "superadmin"
+    const normalize = (r) => r.toLowerCase().replace(/[\s_]/g, '');
+    const role = normalize(rawRole);
+
+    //console.log("Raw Role:", session, "Normalized Role:", role);
+
+    const getMenuItems = (currentRole) => {
+        const items = [
+            {
+                path: '/lesson-plan/dashboard',
+                icon: 'fa-solid fa-chart-line',
+                label: 'Dashboard',
+                description: 'Overview & Statistics'
+            }
+        ];
+
+        // Check against normalized strings
+        if (currentRole === 'superadmin' || currentRole === 'schooladmin') {
+            items.push({
+                path: '/lesson-plan/users',
+                icon: 'fa-solid fa-users',
+                label: 'Users',
+                description: 'Manage All Users'
+            });
+        }
+
+        if (currentRole === 'superadmin') {
+            items.push({
+                path: '/lesson-plan/schools',
+                icon: 'fa-solid fa-school',
+                label: 'Schools',
+                description: 'Manage Schools'
+            });
+        }
+
+        // if (currentRole === 'superadmin' || currentRole === 'schooladmin') {
+        //     items.push({
+        //         path: '/lesson-plan/teachers',
+        //         icon: 'fa-solid fa-chalkboard-user',
+        //         label: 'Teachers',
+        //         description: 'Manage Teachers'
+        //     });
+        // }
+
+        items.push({
+            path: '/lesson-plan/rubrics',
+            icon: 'fa-solid fa-list-check',
+            label: 'Rubrics',
+            description: 'Manage Grade Rubrics'
+        });
+
+        items.push({
+            path: '/lesson-plan/upload',
+            icon: 'fa-solid fa-cloud-arrow-up',
+            label: 'Upload Lesson Plan',
+            description: 'Upload & Manage'
+        });
+
+        // items.push({
+        //     path: '/lesson-plan/answer-sheet',
+        //     icon: 'fa-solid fa-file-pen',
+        //     label: 'Answer Sheet',
+        //     description: 'Extract Text'
+        // });
+
+        if (currentRole === 'superadmin' || currentRole === 'schooladmin' || currentRole === 'teacher') {
+            items.push({
+                path: '/lesson-plan/reports',
+                icon: 'fa-solid fa-file-contract',
+                label: 'Reports',
+                description: 'AI Analysis & COB'
+            });
+        }
+
+        // items.push({
+        //     path: '/admin/settings',
+        //     icon: 'fa-solid fa-gear',
+        //     label: 'Settings',
+        //     description: 'Platform Configuration'
+        // });
+
+        return items;
+    };
+
+    const menuItems = getMenuItems(role);
+
+    const isActive = (path) => location.pathname === path;
+
+    const handleLogout = () => {
+        if (window.confirm('Are you sure you want to logout?')) {
+            localStorage.removeItem('session');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            navigate('/lesson-plan/login');
+        }
+    };
+
+    return (
+        <div className="admin-layout">
+            <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
+                <div className="sidebar-header" style={{ justifyContent: isSidebarOpen ? 'space-between' : 'center', padding: isSidebarOpen ? '1.5rem' : '1rem' }}>
+                    {isSidebarOpen && (
+                        <div className="logo" style={{ display: 'flex', alignItems: 'center' }}>
+                            <img
+                                src={logo}
+                                alt="NITI Solutions"
+                                style={{
+                                    height: '48px',
+                                    objectFit: 'contain',
+                                    transition: 'transform 0.3s ease',
+                                }}
+                            />
+                        </div>
+                    )}
+                    <button
+                        className="sidebar-toggle"
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    >
+                        <i className={`fa-solid ${isSidebarOpen ? 'fa-chevron-left' : 'fa-chevron-right'}`}></i>
+                    </button>
+                </div>
+
+                <div className="sidebar-info" style={{ padding: '10px 20px', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
+                    {isSidebarOpen && <span><i className="fa-solid fa-user-shield" style={{ marginRight: '8px' }}></i>{role.replace('_', ' ')}</span>}
+                </div>
+
+                <nav className="sidebar-nav">
+                    {menuItems.map((item) => (
+                        <button
+                            key={item.path}
+                            className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
+                            onClick={() => navigate(item.path)}
+                        >
+                            <span className="nav-icon"><i className={item.icon}></i></span>
+                            {isSidebarOpen && (
+                                <div className="nav-content">
+                                    <span className="nav-label">{item.label}</span>
+                                    <span className="nav-description">{item.description}</span>
+                                </div>
+                            )}
+                            {isActive(item.path) && <div className="active-indicator"></div>}
+                        </button>
+                    ))}
+                </nav>
+
+                <div className="sidebar-footer">
+                    <button className="logout-btn" onClick={handleLogout}>
+                        <span className="logout-icon"><i className="fa-solid fa-right-from-bracket"></i></span>
+                        {isSidebarOpen && <span>Logout</span>}
+                    </button>
+                </div>
+            </aside>
+
+            <main className={`admin-main ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+                <Outlet />
+            </main>
+        </div>
+    );
+};
+
+export default LessonPlanAdminLayout;

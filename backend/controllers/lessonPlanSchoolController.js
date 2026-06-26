@@ -1,0 +1,220 @@
+const { School, Class, User } = require('../lessonPlanModels');
+
+/**
+ * schoolController.js
+ * 
+ * Manages the School and Class resources.
+ * Allows Super Admins to create and manage schools, and handles the
+ * cascading of School information down to specific roles like Teachers and School Admins.
+ */
+
+/**
+ * Creates a new school entry in the database.
+ * Validates for duplicate email or name fields.
+ */
+const addSchool = async (req, res) => {
+    try {
+        const { name, address, contact_number, email, principal, teacher_count, student_count } = req.body;
+
+        if (!name || !email) {
+            return res.status(400).json({ message: 'Name and Email are required' });
+        }
+
+        // Check for duplicates
+        const existingSchool = await School.findOne({ where: { email } });
+        if (existingSchool) {
+            return res.status(400).json({ message: 'School with this email already exists' });
+        }
+
+        const existingName = await School.findOne({ where: { name } });
+        if (existingName) {
+            return res.status(400).json({ message: 'School with this name already exists' });
+        }
+
+        const school = await School.create({
+            name,
+            address,
+            contact_number,
+            email,
+            principal,
+            teacher_count,
+            student_count
+        });
+
+        // Ensure a folder is created for the school in uploads directory
+        const fs = require('fs');
+        const path = require('path');
+        const schoolFolderName = name.replace(/[^a-zA-Z0-9]/g, '_');
+        const schoolDir = path.join(__dirname, '../uploads', schoolFolderName);
+        if (!fs.existsSync(schoolDir)) {
+            fs.mkdirSync(schoolDir, { recursive: true });
+            console.log(`Created directory for school: ${schoolDir}`);
+        }
+
+        res.status(201).json(school);
+    } catch (err) {
+        console.error("addSchool error:", err.message);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+/**
+ * Retrieves a paginated list of schools.
+ * If the requesting user is a School Admin or Teacher, it only returns their designated school.
+ */
+const getSchools = async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const offset = (page - 1) * limit;
+
+        let whereClause = {};
+        const userRole = req.user?.role;
+        const userId = req.user?.id;
+
+        // If School Admin or Teacher, show only their school
+        if (userRole === 'school_admin' || userRole === 'teacher') {
+            const currentUser = await User.findByPk(userId);
+            if (currentUser && currentUser.school_id) {
+                whereClause.id = currentUser.school_id;
+            }
+        }
+
+        const { count, rows } = await School.findAndCountAll({
+            where: whereClause,
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        });
+
+        res.json({
+            data: rows,
+            total: count,
+            page: parseInt(page),
+            totalPages: Math.ceil(count / limit)
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+/**
+ * Updates specific fields of an existing School record.
+ * Handles duplicate email checks if the email is being changed.
+ */
+const updateSchool = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, address, contact_number, email, principal, teacher_count, student_count, status } = req.body;
+
+        const school = await School.findByPk(id);
+        if (!school) return res.status(404).json({ message: 'School not found' });
+
+        // If email is changing, check for duplicates
+        if (email && email !== school.email) {
+            const existingEmail = await School.findOne({ where: { email } });
+            if (existingEmail) return res.status(400).json({ message: 'Email already in use' });
+        }
+
+        await school.update({ name, address, contact_number, email, principal, teacher_count, student_count, status });
+        res.json(school);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+/**
+ * Removes a school from the database permanently.
+ */
+const deleteSchool = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const school = await School.findByPk(id);
+        if (!school) return res.status(404).json({ message: 'School not found' });
+
+        await school.destroy();
+        res.json({ message: 'School deleted' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+/**
+ * Adds a Class/Section assigned to a specific School ID.
+ */
+const addClass = async (req, res) => {
+    try {
+        const { school_id } = req.params;
+        const { name, section } = req.body;
+
+        const newClass = await Class.create({
+            name,
+            section,
+            school_id
+        });
+
+        res.status(201).json(newClass);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+/**
+ * Retrieves all classes/sections associated with a given School ID.
+ */
+const getClasses = async (req, res) => {
+    try {
+        const { school_id } = req.params;
+        const classes = await Class.findAll({ where: { school_id } });
+        res.json(classes);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+/**
+ * Retrieves a list of video files stored in the school's specific folder.
+ * This supports the workflow where large videos are uploaded via FTP.
+ */
+const getSchoolVideos = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const school = await School.findByPk(id);
+        
+        if (!school) {
+            return res.status(404).json({ message: 'School not found' });
+        }
+
+        const fs = require('fs');
+        const path = require('path');
+        const schoolFolderName = school.name.replace(/[^a-zA-Z0-9]/g, '_');
+        const schoolDir = path.join(__dirname, '../uploads', schoolFolderName);
+
+        let videos = [];
+        if (fs.existsSync(schoolDir)) {
+            const files = fs.readdirSync(schoolDir);
+            videos = files.filter(file => {
+                const ext = path.extname(file).toLowerCase();
+                return ['.mp4', '.mov', '.avi', '.mkv'].includes(ext);
+            });
+        }
+
+        res.json({ videos });
+    } catch (err) {
+        console.error('getSchoolVideos error:', err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+module.exports = {
+    addSchool,
+    getSchools,
+    updateSchool,
+    deleteSchool,
+    addClass,
+    getClasses,
+    getSchoolVideos
+};

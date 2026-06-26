@@ -1,0 +1,39 @@
+const { DataTypes } = require('sequelize');
+const { lessonPlanSequelize: sequelize } = require('../config/lessonPlanDatabase');
+
+// Standard Rubrics or Custom ones
+const Rubric = sequelize.define('Rubric', {
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+    },
+    grade: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    school_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
+    file_path: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    file_type: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    original_name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    content: {
+        type: DataTypes.TEXT('long'), // Parsed text from document
+        allowNull: true
+    }
+}, {
+    timestamps: true
+});
+
+module.exports = Rubric;

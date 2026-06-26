@@ -12,111 +12,156 @@ const fs = require('fs');
  * Generates a PDF report matching the "Foundation for Ed-Equity" Audit Report format.
  * Recreates the exact layout using clean HTML/CSS Tables instead of fragile absolute positioning.
  */
+const generateLessonPlanReportHtml = (data) => {
+    const cob = data.cob_report || {};
+    const headerData = cob.header || {};
+    const scores = cob.scores || {};
+    const params = cob.parameters || [];
+
+    let tableBody = '';
+    let totalMaxScore = 0;
+    let totalEarnedScore = 0;
+
+    const grouped = {};
+    const categoryOrder = [];
+
+    params.forEach(p => {
+        const cat = p.category || 'General';
+        if (!grouped[cat]) {
+            grouped[cat] = [];
+            categoryOrder.push(cat);
+        }
+        grouped[cat].push(p);
+    });
+
+    categoryOrder.forEach(catName => {
+        tableBody += `
+            <tr>
+                <td colspan="6" style="background-color: #d1d5db; font-weight: bold; padding: 8px;">${catName}</td>
+            </tr>
+        `;
+
+        grouped[catName].forEach((p, idx) => {
+            let wStr = String(p.weight || "1").replace(/[^0-9.]/g, '');
+            let ooi = parseFloat(wStr) || 1;
+            
+            let sStr = String(p.score).match(/^[0-9.]+/);
+            let score = sStr ? parseFloat(sStr[0]) : 0; // 0, 1, or 2
+
+            let maxScore = ooi * 2;
+            let earnedScore = score * ooi;
+
+            totalMaxScore += maxScore;
+            totalEarnedScore += earnedScore;
+
+            let yesNo = score === 2 ? 'Yes' : 'No';
+
+            tableBody += `
+                <tr>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">${idx + 1}</td>
+                    <td style="border: 1px solid #000; padding: 5px;">${p.name || p.parameter}</td>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">${yesNo}</td>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">${ooi}</td>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">${score}</td>
+                    <td style="border: 1px solid #000; padding: 5px;">${p.comment || p.auditor_note || ''}</td>
+                </tr>
+            `;
+        });
+    });
+
+    let overallPercentage = totalMaxScore > 0 ? ((totalEarnedScore / totalMaxScore) * 100).toFixed(2) : 0;
+
+    return `
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; color: #000; }
+                    .main-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 20px; }
+                    .main-table th, .main-table td { border: 1px solid #000; padding: 6px; }
+                    .main-table th { background-color: #f2f2f2; font-weight: bold; text-align: center; }
+                </style>
+            </head>
+            <body>
+                <div style="font-family: Arial, sans-serif; position: relative; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
+                        <div style="font-size: 14px; font-weight: bold; color: #0000FF; margin-bottom: 5px;">LESSON PLAN – AUDIT REPORT</div>
+                        <div style="text-align: right; font-weight: bold; color: #555; font-size: 14px; margin-bottom: 5px; line-height: 1.2;">
+                            FOUNDATION FOR<br>
+                            <span style="font-size: 24px; color: #444; letter-spacing: 2px;">ED-EQUITY</span>
+                        </div>
+                    </div>
+                    <div style="border-bottom: 4px solid #e0e0e0; margin-bottom: 20px;"></div>
+                    
+                    <table style="width: 100%; font-size: 11px; border: none; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 15%; padding: 2px;">Teacher:</td><td style="font-weight: bold; width: 35%; padding: 2px;">${headerData.facilitator || 'N/A'}</td>
+                            <td style="width: 15%; padding: 2px;">School:</td><td style="font-weight: bold; width: 35%; padding: 2px;">${headerData.school || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 2px;">Grade:</td><td style="font-weight: bold; padding: 2px;">${headerData.grade || 'N/A'}</td>
+                            <td style="padding: 2px;">Section:</td><td style="font-weight: bold; padding: 2px;">${headerData.section || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 2px; padding-top: 10px;">Overall Score:</td><td style="font-weight: bold; font-size: 13px; padding: 2px; padding-top: 10px;">${overallPercentage}% (${totalEarnedScore}/${totalMaxScore})</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <table class="main-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">Sr.No.</th>
+                            <th style="width: 35%;">Parameter</th>
+                            <th style="width: 10%;">Yes/No</th>
+                            <th style="width: 10%;">OOI</th>
+                            <th style="width: 10%;">Score (0-2)</th>
+                            <th style="width: 30%;">If No (Reason) / Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableBody}
+                    </tbody>
+                </table>
+            </body>
+        </html>
+    `;
+};
+
 const generateReportFromHtml = async (data, templatePath, outputPath) => {
     try {
-        //console.log(`Generating Structured Audit Report...`);
+        let finalHtml = '';
+        if (data.auditor_note && data.auditor_note.includes('Lesson Plan')) {
+            finalHtml = generateLessonPlanReportHtml(data);
+        } else {
+            const cob = data.cob_report || {};
+            const headerData = cob.header || {};
+            const scores = cob.scores || {};
+            const params = cob.parameters || [];
 
-        const cob = data.cob_report || {};
-        const headerData = cob.header || {};
-        const scores = cob.scores || {};
-        const params = cob.parameters || [];
-
-        // 1. Build The Header HTML (Foundation for Ed-Equity Style)
-        const headerHtml = `
-            <div style="font-family: Arial, sans-serif; position: relative; margin-bottom: 20px;">
-                <div style="text-align: right; font-weight: bold; color: #555; font-size: 14px; margin-bottom: 5px;">
-                    FOUNDATION FOR<br>
-                    <span style="font-size: 18px; color: #444;">ED-EQUITY</span>
-                </div>
-                
-                <div style="border-bottom: 2px solid #ccc; margin-bottom: 15px;"></div>
-
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">
-                    <div style="font-size: 16px; font-weight: bold; color: #0000CC;">CLASSROOM OBSERVATION – AUDIT REPORT</div>
-                    <div style="text-align: right; font-size: 10px; color: #333;">
-                        Filename: <b>${headerData.school || 'School'}_COB${headerData.round || '1'}_${headerData.facilitator || 'Teacher'}_${headerData.date || 'Date'}</b>
-                    </div>
-                </div>
-
-                <table class="meta-table">
-                    <tr>
-                        <td class="label">Teacher:</td>
-                        <td class="value">${headerData.facilitator || 'N/A'}</td>
-                        <td class="label">School:</td>
-                        <td class="value">${headerData.school || 'N/A'}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">Grade:</td>
-                        <td class="value">${headerData.grade || 'N/A'}</td>
-                        <td class="label">Section:</td>
-                        <td class="value">${headerData.section || 'N/A'}</td>
-                        <td class="label">Subject:</td>
-                        <td class="value">${headerData.subject || 'N/A'}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">Observation Date:</td>
-                        <td class="value">${headerData.date || 'N/A'}</td>
-                        <td class="label">BLM / Chapter:</td>
-                        <td class="value">${headerData.topic_blm || 'N/A'}</td>
-                        <td class="label">Duration:</td>
-                        <td class="value">${headerData.duration && headerData.duration !== 'N/A' ? headerData.duration : '45m'}</td>
-                    </tr>
-                    <tr>
-                        <td class="label">Type:</td>
-                        <td class="value">Informed</td>
-                        <td colspan="4" style="font-size: 9px; color: #0000CC; vertical-align: bottom;">
-                            Type of session = Assignment Solving, Concept Discussion, Activity, etc
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="label">Type of Session:</td>
-                        <td class="value">${headerData.session_type || 'Classroom'}</td>
-                        <td class="label">Interaction No.:</td>
-                        <td class="value">01</td>
-                        <td class="label">Session No.:</td>
-                        <td class="value">01</td>
-                    </tr>
-                </table>
-
-                <div style="margin-top: 15px; display: flex; align-items: flex-start;">
-                    <div style="font-weight: bold; font-size: 12px; margin-right: 10px; padding-top: 5px;">Overall Score:</div>
-                    <div style="font-weight: bold; font-size: 14px; border: 1px solid #000; padding: 4px 8px;">${scores.overall_percentage || '0%'}</div>
-                    <div style="margin-left: 15px; font-size: 10px; font-style: italic; color: #0000CC; padding-top: 6px;">Overall Score is Autogenerated</div>
-                </div>
-            </div>
-        `;
-
-        const whatHappenedList = cob.what_happened && cob.what_happened.length > 0
-            ? cob.what_happened.map(item => `<li style="margin-bottom: 5px;">${item}</li>`).join('')
-            : '<li style="margin-bottom: 5px;">No details provided by AI.</li>';
-
-        const whatHappenedHtml = `
-            <div style="font-family: Arial, sans-serif; font-size: 11px; margin-bottom: 20px;">
-                <div style="font-weight: bold; font-size: 12px; margin-bottom: 5px;">What happened during the session:</div>
-                <ul style="margin: 0; padding-left: 20px; text-align: left;">
-                    ${whatHappenedList}
-                </ul>
-                <div style="border-bottom: 4px solid #e0e0e0; margin-top: 15px;"></div>
-            </div>
-        `;
-
-        // 2. Build Segment Scores Table
-        // Use the dynamic helper instead of hardcoded rows
-        const segmentHtml = generateDynamicSegmentTable(params);
-
-        // 3. Build Detailed Parameters Table
-        let tableBody = '';
-
-        // Dynamic Category Extraction
-        // We want to preserve the order if possible, or just group them.
-        // Let's deduce categories and weights from the parameters themselves if available, 
-        // or just group by 'category' string.
-
+        // 1. Calculations
+        let globalTotalWeight = 0;
+        let globalEarnedWeightedScore = 0;
         const grouped = {};
-        const categoryOrder = []; // To keep track of order of appearance
+        const categoryOrder = [];
 
         params.forEach(p => {
-            const cat = p.category || 'General'; // Default if missing
+            let wStr = String(p.weight || "1").replace(/[^0-9.]/g, '');
+            let w = parseFloat(wStr) || 1;
+            globalTotalWeight += w;
+
+            let sStr = String(p.score).match(/^[0-9.]+/);
+            let s = sStr ? parseFloat(sStr[0]) : 0;
+
+            let outOfStr = String(p.out_of).match(/^[0-9.]+/);
+            let outOf = outOfStr ? parseFloat(outOfStr[0]) : 1;
+
+            if (outOf > 0) {
+                globalEarnedWeightedScore += (s / outOf) * w;
+            }
+
+            const cat = p.category || 'General';
             if (!grouped[cat]) {
                 grouped[cat] = [];
                 categoryOrder.push(cat);
@@ -124,107 +169,290 @@ const generateReportFromHtml = async (data, templatePath, outputPath) => {
             grouped[cat].push(p);
         });
 
+        // Calculate segment scores and overall score
+        const segmentScores = {};
+        let globalEarnedScore = 0;
+        let globalMaxWeight = 0;
+
+        categoryOrder.forEach(catName => {
+            const catParams = grouped[catName];
+            
+            // 1. Calculate the Max Category Weight (Global Weight of this category)
+            let catGlobalWeight = 0;
+            let explicitCatWeight = null;
+            catParams.forEach(p => {
+                if (p.category_weight !== undefined && p.category_weight !== null && p.category_weight !== '') {
+                    let wStr = String(p.category_weight).replace(/[^0-9.]/g, '');
+                    let w = parseFloat(wStr);
+                    if (!isNaN(w) && w > 0) explicitCatWeight = w;
+                }
+            });
+            
+            // 2. Calculate Local Earned Score for this Category
+            let localEarned = 0;
+            let localMax = 0;
+            
+            catParams.forEach(p => {
+                let wStr = String(p.weight || "1").replace(/[^0-9.]/g, '');
+                let w = parseFloat(wStr) || 1;
+                
+                let sStr = String(p.score).match(/^[0-9.]+/);
+                let s = sStr ? parseFloat(sStr[0]) : 0;
+                
+                let outOfStr = String(p.out_of).match(/^[0-9.]+/);
+                let outOf = outOfStr ? parseFloat(outOfStr[0]) : 1;
+                
+                // If it's NA, we might skip it or treat it as 0. 
+                // Currently NA is score=NA, so s=0. 
+                // Wait, if it's NA, the local max shouldn't include its weight!
+                let isNA = p.score === 'NA' || p.score === 'N/A' || p.score === null || p.score === 'null';
+                
+                if (!isNA) {
+                    localMax += w;
+                    if (outOf > 0) {
+                        localEarned += (s / outOf) * w;
+                    }
+                }
+            });
+            
+            // Percentage earned within this segment
+            const segmentPercentage = localMax > 0 ? (localEarned / localMax) * 100 : 0;
+            
+            // Add to Global Score using explicit category weight if available, else fallback to localMax
+            catGlobalWeight = explicitCatWeight !== null ? explicitCatWeight : localMax;
+            globalMaxWeight += catGlobalWeight;
+            
+            const earnedGlobalForCat = (segmentPercentage / 100) * catGlobalWeight;
+            globalEarnedScore += earnedGlobalForCat;
+            
+            // The user wants the Segment table to show the GLOBAL contribution (e.g. 40% out of 50% max)
+            segmentScores[catName] = earnedGlobalForCat;
+        });
+
+        const calculatedOverall = globalMaxWeight > 0 ? (globalEarnedScore / globalMaxWeight) * 100 : 0;
+        scores.overall_percentage = calculatedOverall.toFixed(2) + '%';
+
+        // 2. Build The Header HTML
+        const headerHtml = `
+            <div style="font-family: Arial, sans-serif; position: relative; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
+                    <div style="font-size: 14px; font-weight: bold; color: #0000FF; margin-bottom: 5px;">CLASSROOM OBSERVATION – AUDIT REPORT</div>
+                    <div style="text-align: right; font-weight: bold; color: #555; font-size: 14px; margin-bottom: 5px; line-height: 1.2;">
+                        FOUNDATION FOR<br>
+                        <span style="font-size: 24px; color: #444; letter-spacing: 2px;">ED-EQUITY</span>
+                    </div>
+                </div>
+                
+                <div style="border-bottom: 4px solid #e0e0e0; margin-bottom: 20px;"></div>
+
+                <table style="width: 100%; font-size: 11px; margin-bottom: 20px; border: none; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 15%; padding: 2px;">Teacher:</td><td style="font-weight: bold; width: 35%; padding: 2px;">${headerData.facilitator || 'N/A'}</td>
+                        <td style="width: 15%; padding: 2px;"></td><td style="font-weight: bold; width: 15%; padding: 2px;"></td>
+                        <td style="width: 10%; padding: 2px;">School:</td><td style="font-weight: bold; width: 10%; padding: 2px;">${headerData.school || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 2px;">Grade:</td><td style="font-weight: bold; padding: 2px;">${headerData.grade || 'N/A'}</td>
+                        <td style="padding: 2px;">Section:</td><td style="font-weight: bold; padding: 2px;">${headerData.section || 'N/A'}</td>
+                        <td style="padding: 2px;">Subject:</td><td style="font-weight: bold; padding: 2px;">${headerData.subject || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 2px;"></td><td style="padding: 2px;"></td>
+                        <td style="padding: 2px;"></td><td style="padding: 2px;"></td>
+                        <td style="padding: 2px;">BLM:</td><td style="font-weight: bold; padding: 2px;">${headerData.topic_blm || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 2px;">Observation Date:</td><td style="font-weight: bold; padding: 2px;">${headerData.date || 'N/A'}</td>
+                        <td style="padding: 2px;">Type:</td><td style="font-weight: bold; padding: 2px;">Uninformed</td>
+                        <td style="padding: 2px;">Duration:</td><td style="font-weight: bold; padding: 2px;">${headerData.duration && headerData.duration !== 'N/A' ? headerData.duration : '45m'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 2px;">Type of Session:</td><td style="font-weight: bold; padding: 2px;">${headerData.session_type || 'Classroom'}</td>
+                        <td style="padding: 2px;">Interaction No.:</td><td style="font-weight: bold; padding: 2px;">01</td>
+                        <td style="padding: 2px;">Session No.:</td><td style="font-weight: bold; padding: 2px;">01</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 2px; padding-top: 10px;">Overall Score:</td><td style="font-weight: bold; font-size: 13px; padding: 2px; padding-top: 10px;">${scores.overall_percentage || '0%'}</td>
+                        <td colspan="4"></td>
+                    </tr>
+                </table>
+            </div>
+        `;
+
+        // 3. Segment Scores Table
+        const segmentRows = categoryOrder.map(catName => {
+            return `
+                <tr>
+                    <td style="border: 2px solid #000; padding: 4px; text-align: center;">${segmentScores[catName].toFixed(2)}%</td>
+                    <td style="border: 2px solid #000; padding: 4px;">${catName}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const segmentHtml = `
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                <table style="width: 60%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11px; border: 2px solid #000;">
+                    <tr>
+                        <td colspan="2" style="text-align: right; font-weight: bold; color: #0000FF; padding: 4px; border: 2px solid #000; background-color: #f2f2f2;">Segment Scores</td>
+                    </tr>
+                    <tr style="font-weight: bold; text-decoration: underline;">
+                        <td style="border: 2px solid #000; padding: 4px; width: 30%; text-align: center;">Score</td>
+                        <td style="border: 2px solid #000; padding: 4px;">Segments</td>
+                    </tr>
+                    ${segmentRows}
+                </table>
+            </div>
+        `;
+
+        // 4. Build Detailed Parameters Table
+        let tableBody = '';
         let globalIndex = 1;
 
         categoryOrder.forEach(catName => {
             const catParams = grouped[catName];
-            // Calculate pseudo-weight or use provided
-            const totalMaxScore = catParams.reduce((sum, p) => sum + (p.out_of || 0), 0);
+            
+            // Calculate Max Category Weight
+            let catMaxWeight = 0;
+            let explicitCatWeight = null;
+            
+            catParams.forEach(p => {
+                if (p.category_weight !== undefined && p.category_weight !== null && p.category_weight !== '') {
+                    let wStr = String(p.category_weight).replace(/[^0-9.]/g, '');
+                    let w = parseFloat(wStr);
+                    if (!isNaN(w) && w > 0) {
+                        explicitCatWeight = w;
+                    }
+                }
+            });
 
-            // Render Category Header
+            if (explicitCatWeight !== null) {
+                catMaxWeight = explicitCatWeight;
+            } else {
+                catParams.forEach(p => {
+                    let wStr = String(p.weight || "1").replace(/[^0-9.]/g, '');
+                    catMaxWeight += parseFloat(wStr) || 1;
+                });
+            }
+            
+            const catScoreDisplay = catMaxWeight.toFixed(0) + '%';
+
+            // Render Category Header (Gray Bar)
             tableBody += `
-                <tr class="category-header">
-                    <td colspan="6" style="text-align: right; padding-right: 15px; background-color: #e6e6e6; font-weight: bold; color: #0000FF; border: 1px solid #000;">
-                        ${catName}
+                <tr>
+                    <td colspan="6" style="border: none; background-color: #f2f2f2; text-align: right; padding: 5px 10px; font-weight: bold; color: #0000FF; padding-top: 10px; padding-bottom: 10px;">
+                        ${catName} <span style="color: #888;">(${catScoreDisplay})</span>
                     </td>
                 </tr>
             `;
 
             // Render Parameters for this Category
             catParams.forEach(p => {
-                const score = p.score !== undefined ? p.score : 0;
-                const max = p.out_of || 2;
-                let weight = (p.weight && p.weight !== 'N/A') ? String(p.weight) : '1';
-                if (!weight.includes('%')) {
-                    weight += '%';
+                const score = p.score !== undefined ? p.score : 'NA';
+                const max = p.out_of !== undefined ? p.out_of : 'NA';
+                
+                // Extract Weight Number
+                let wStr = String(p.weight || "1").replace(/[^0-9.]/g, '');
+                let w = parseFloat(wStr) || 1;
+                
+                // Calculate Earned Weight: (Score / OutOf) * Weight
+                let earnedWeightStr = '0.0%';
+                if (score === 'NA' || max === 'NA') {
+                    earnedWeightStr = '0.0%';
+                } else {
+                    let sVal = parseFloat(score) || 0;
+                    let mVal = parseFloat(max) || 1;
+                    if (mVal > 0) {
+                        earnedWeightStr = ((sVal / mVal) * w).toFixed(1) + '%';
+                    }
                 }
 
                 tableBody += `
                     <tr>
-                        <td style="border: 1px solid #000; padding: 5px; text-align: center; font-weight: bold; width: 30px;">
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center; font-weight: bold;">
                             ${globalIndex++}
                         </td>
-                        <td style="border: 1px solid #000; padding: 5px; width: 30%;">
+                        <td style="border: 1px solid #000; padding: 5px;">
                             <b>${p.name}</b><br>
-                            <span style="font-size: 9px; color: #555;">(Score based on observation)</span>
+                            <span style="font-size: 9px; color: #555;">${p.description || ''}</span>
                         </td>
-                        <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle; font-weight: bold;">${score}</td>
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle;">${score}</td>
                         <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle;">${max}</td>
-                        <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle;">${weight}</td>
-                        <td style="border: 1px solid #000; padding: 5px; font-size: 10px;">${p.comment || 'No comments provided.'}</td>
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle;">${earnedWeightStr}</td>
+                        <td style="border: 1px solid #000; padding: 5px;">${p.comment || 'No comments provided.'}</td>
                     </tr>
                 `;
             });
+            
+            // Add a small spacer row without borders
+            tableBody += `
+                <tr>
+                    <td colspan="6" style="border: none; height: 10px;"></td>
+                </tr>
+            `;
         });
 
-        // 4. Assemble Final HTML
-        const finalHtml = `
+        // 5. What Happened Section
+        const whatHappenedList = cob.what_happened && cob.what_happened.length > 0
+            ? cob.what_happened.map(item => `<li style="margin-bottom: 5px;">${item}</li>`).join('')
+            : '<li style="margin-bottom: 5px;">No details provided by AI.</li>';
+
+        const whatHappenedHtml = `
+            <div style="font-family: Arial, sans-serif; font-size: 11px; margin-bottom: 20px; margin-top: 10px;">
+                <div style="border-bottom: 2px solid #000; margin-bottom: 10px;"></div>
+                <div style="font-weight: bold; font-size: 12px; margin-bottom: 5px;">What happened during the session:</div>
+                <ul style="margin: 0; padding-left: 15px; text-align: left;">
+                    ${whatHappenedList}
+                </ul>
+            </div>
+        `;
+
+        // 6. Assemble Final HTML
+        finalHtml = `
             <!DOCTYPE html>
             <html>
                 <head>
                     <meta charset="UTF-8">
                     <style>
-                        body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; }
-                        .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
-                        .meta-table td { padding: 4px; }
-                        .meta-table .label { font-weight: bold; width: 120px; }
-                        .meta-table .value { font-weight: bold; color: #000; border-bottom: 1px dotted #ccc; }
-                        
-                        .main-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
-                        .main-table th { background-color: #f2f2f2; border: 1px solid #000; padding: 5px; text-align: center; font-weight: bold; }
-                        .main-table td { border: 1px solid #000; padding: 5px; vertical-align: top; }
+                        body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; color: #000; }
+                        .main-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+                        .main-table th { border: none; padding: 5px; text-align: center; font-weight: bold; color: #888; text-decoration: underline; }
+                        .col-index { width: 30px; }
+                        .col-param { width: 25%; text-align: left !important; }
+                        .col-score { width: 8%; }
+                        .col-outof { width: 8%; }
+                        .col-weighted { width: 10%; }
+                        .col-comments { text-align: left !important; }
                     </style>
                 </head>
                 <body>
                     ${headerHtml}
                     ${segmentHtml}
-                    <br>
                     <table class="main-table">
                         <thead>
                             <tr>
-                                <th width="30">Sr No.</th>
-                                <th>Parameter</th>
-                                <th width="50">Score</th>
-                                <th width="50">Out of</th>
-                                <th width="60">Weightage</th>
-                                <th>Comments</th>
+                                <th class="col-index"></th>
+                                <th class="col-param">Parameter</th>
+                                <th class="col-score">Score</th>
+                                <th class="col-outof">Out of</th>
+                                <th class="col-weighted">Weighted</th>
+                                <th class="col-comments">Comments</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${tableBody}
                         </tbody>
                     </table>
-                    <br>
                     ${whatHappenedHtml}
-                    
-                    <div style="margin-top: 20px; padding: 10px; background-color: #f9f9f9; border: 1px solid #ddd; font-size: 11px;">
-                        <strong>Reference Rubric Used for Evaluation:</strong> 
-                        ${headerData.rubric_url ? `<a href="${headerData.rubric_url}" target="_blank" style="color: #0000CC; text-decoration: underline; font-weight: bold;">${headerData.rubric_name}</a>` : `<span style="font-weight: bold;">${headerData.rubric_name || 'Standard'}</span>`}
-                    </div>
-
-                    <div style="margin-top: 20px; font-size: 10px; text-align: center; color: #888;">
-                        Generated by AI School Audit System | Foundation for Ed-Equity
-                    </div>
                 </body>
             </html>
         `;
+        }
 
-        // 5. Generate PDF
+        // 7. Generate PDF
         const puppeteerOptions = {
             headless: 'new',
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         };
-        // Use system chromium if specified, otherwise rely on Puppeteer's bundled browser
         if (process.env.PUPPETEER_EXECUTABLE_PATH) {
             puppeteerOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
         } else if (fs.existsSync('/usr/bin/chromium-browser')) {
@@ -249,69 +477,5 @@ const generateReportFromHtml = async (data, templatePath, outputPath) => {
         throw error;
     }
 };
-
-function generateSegmentRow(params, key, label) {
-    // If key is null, it means we are just using the label as the exact category name
-    const searchKey = key || label;
-
-    // Exact match or Include match depending on robust we want to be
-    // Using simple filter for now. If we want fully dynamic segments table:
-    // We should probably rewrite this function to iterate over the unique categories found.
-    return '';
-}
-
-// Helper to generate the full segment table dynamically
-function generateDynamicSegmentTable(params) {
-    const grouped = {};
-    params.forEach(p => {
-        const cat = p.category || 'General';
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(p);
-    });
-
-    const rows = Object.keys(grouped).map(catName => {
-        const catParams = grouped[catName];
-        let totalWeight = 0;
-        let earnedWeightedScore = 0;
-
-        catParams.forEach(p => {
-            let wStr = String(p.weight || "1").replace(/[^0-9.]/g, '');
-            let w = parseFloat(wStr) || 1;
-
-            let sStr = String(p.score).match(/^[0-9.]+/);
-            let s = sStr ? parseFloat(sStr[0]) : 0;
-
-            let outOfStr = String(p.out_of).match(/^[0-9.]+/);
-            let outOf = outOfStr ? parseFloat(outOfStr[0]) : 1;
-
-            if (outOf > 0) {
-                earnedWeightedScore += (s / outOf) * w;
-                totalWeight += w;
-            }
-        });
-
-        const percentage = totalWeight > 0 ? ((earnedWeightedScore / totalWeight) * 100).toFixed(0) + '%' : 'N/A';
-
-        return `
-            <tr>
-                <td style="border: 1px solid #000; padding: 4px; text-align: center;">${percentage}</td>
-                <td style="border: 1px solid #000; padding: 4px;">${catName}</td>
-            </tr>
-        `;
-    }).join('');
-
-    return `
-        <table class="segment-table" style="width: 60%; margin: 10px auto; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11px;">
-            <tr style="background-color: #f2f2f2;">
-                <td colspan="2" style="text-align: center; font-weight: bold; color: #0000CC; border: 1px solid #000; padding: 4px;">Segment Scores</td>
-            </tr>
-            <tr style="background-color: #ddd; font-weight: bold;">
-                <td style="border: 1px solid #000; padding: 4px; width: 30%; text-align: center;">Score</td>
-                <td style="border: 1px solid #000; padding: 4px;">Segments</td>
-            </tr>
-            ${rows}
-        </table>
-    `;
-}
 
 module.exports = { generateReportFromHtml };
