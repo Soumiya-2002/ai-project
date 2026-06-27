@@ -53,8 +53,8 @@ const addSchool = async (req, res) => {
 
         res.status(201).json(school);
     } catch (err) {
-        console.error("addSchool error:", err.message);
-        res.status(500).json({ message: err.message });
+        console.error(err.message);
+        res.status(500).send('Server Error');
     }
 };
 

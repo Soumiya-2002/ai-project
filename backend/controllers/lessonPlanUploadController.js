@@ -36,6 +36,8 @@ const upload = multer({
         }
     }
 }).fields([
+    { name: 'video', maxCount: 1 },
+    { name: 'readingMaterial', maxCount: 1 },
     { name: 'lessonPlan', maxCount: 1 }
 ]);
 
@@ -103,16 +105,41 @@ const uploadVideo = async (req, res) => {
             //console.log("Files:", req.files ? Object.keys(req.files) : "None");
             //console.log("Body:", req.body);
 
-            let lessonPlanFileName = '';
+            let videoFileName = '';
 
-            if (req.files && req.files.lessonPlan) {
-                lessonPlanFileName = req.files.lessonPlan[0].filename;
+            if (req.body.uploadId && req.body.originalVideoName && req.body.totalChunks) {
+                // Chunked upload merge logic
+                const finalExt = path.extname(req.body.originalVideoName);
+                videoFileName = `video-${Date.now()}${finalExt}`;
+                const finalFilePath = path.join(__dirname, '../uploads', videoFileName);
+                const tempDir = path.join(__dirname, '../uploads/temp', req.body.uploadId);
+
+                try {
+                    const writeStream = fs.createWriteStream(finalFilePath);
+                    for (let i = 0; i < parseInt(req.body.totalChunks); i++) {
+                        const chunkPath = path.join(tempDir, i.toString());
+                        if (!fs.existsSync(chunkPath)) throw new Error(`Missing chunk ${i}`);
+                        const data = fs.readFileSync(chunkPath);
+                        writeStream.write(data);
+                        fs.unlinkSync(chunkPath);
+                    }
+                    writeStream.end();
+                    try { fs.rmdirSync(tempDir); } catch (err) { }
+                } catch (e) {
+                    console.error("Chunk Merge Error:", e);
+                    return res.status(500).json({ message: "Failed to merge video chunks.", error: e.message });
+                }
+            } else if (req.files && req.files.video) {
+                videoFileName = req.files.video[0].filename;
+            } else if (req.body.existingVideoFileName) {
+                videoFileName = req.body.existingVideoFileName;
             } else {
-                return res.status(400).json({ message: 'No lesson plan selected!' });
+                console.warn("No video file found in request");
+                return res.status(400).json({ message: 'No video selected!' });
             }
 
             // Move the file to a school-specific folder if school_id is provided and it's a new upload
-            let finalVideoRelPath = `/uploads/${lessonPlanFileName}`;
+            let finalVideoRelPath = `/uploads/${videoFileName}`;
             if (req.body.school_id) {
                 try {
                     const { School } = require('../lessonPlanModels');
@@ -121,15 +148,27 @@ const uploadVideo = async (req, res) => {
                         const schoolFolderName = school.name.replace(/[^a-zA-Z0-9]/g, '_');
                         const schoolDir = path.join(__dirname, '../uploads', schoolFolderName);
                         
-                        if (!fs.existsSync(schoolDir)) {
-                            fs.mkdirSync(schoolDir, { recursive: true });
-                        }
-                        const oldPath = path.join(__dirname, '../uploads', lessonPlanFileName);
-                        const newLessonPlanFileName = `${Date.now()}-${lessonPlanFileName}`; // prevent conflicts
-                        const newPath = path.join(schoolDir, newLessonPlanFileName);
-                        if (fs.existsSync(oldPath)) {
-                            fs.renameSync(oldPath, newPath);
-                            finalVideoRelPath = `/uploads/${schoolFolderName}/${newLessonPlanFileName}`;
+                        if (req.body.existingVideoFileName) {
+                            // Video already exists in the school's FTP folder, just construct the path
+                            finalVideoRelPath = `/uploads/${schoolFolderName}/${videoFileName}`;
+                            
+                            // Check if file actually exists just to be safe
+                            const exactPath = path.join(schoolDir, videoFileName);
+                            if (!fs.existsSync(exactPath)) {
+                                console.warn(`Selected FTP file not found: ${exactPath}`);
+                            }
+                        } else {
+                            // It's a new upload, we need to move it to the school folder
+                            if (!fs.existsSync(schoolDir)) {
+                                fs.mkdirSync(schoolDir, { recursive: true });
+                            }
+                            const oldPath = path.join(__dirname, '../uploads', videoFileName);
+                            const newVideoFileName = `${Date.now()}-${videoFileName}`; // prevent conflicts
+                            const newPath = path.join(schoolDir, newVideoFileName);
+                            if (fs.existsSync(oldPath)) {
+                                fs.renameSync(oldPath, newPath);
+                                finalVideoRelPath = `/uploads/${schoolFolderName}/${newVideoFileName}`;
+                            }
                         }
                     }
                 } catch (folderErr) {
@@ -139,7 +178,7 @@ const uploadVideo = async (req, res) => {
             }
 
             try {
-                const readingText = "";
+                const readingText = req.files.readingMaterial ? await extractText(req.files.readingMaterial[0]) : "";
                 const lessonText = req.files.lessonPlan ? await extractText(req.files.lessonPlan[0]) : "";
 
                 const { teacher_id, date, lecture_number, lecture_id } = req.body;
@@ -242,9 +281,10 @@ const uploadVideo = async (req, res) => {
                                 console.warn("[Background] Failed to fetch rich metadata:", metaErr.message);
                             }
 
-                            // Run AI Analysis specifically for Lesson Plans
-                            console.log("[Background] Calling AI Service for Lesson Plan (This takes time)...");
-                            const analysisResult = await AiService.analyzeLessonPlan(lecture.video_url, lecture.id, {
+                            // Run AI Analysis
+                            console.log("[Background] Calling AI Service (This takes time)...");
+                            const analysisResult = await AiService.analyzeVideo(lecture.video_url, lecture.id, {
+                                readingMaterial: readingText,
                                 lessonPlan: lessonText,
                                 meta: contextMeta
                             });

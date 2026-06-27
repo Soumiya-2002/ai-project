@@ -66,8 +66,8 @@ const LessonPlanAdminLayout = () => {
 
         items.push({
             path: '/lesson-plan/upload',
-            icon: 'fa-solid fa-cloud-arrow-up',
-            label: 'Upload Lesson Plan',
+            icon: 'fa-solid fa-video',
+            label: 'Upload Lecture',
             description: 'Upload & Manage'
         });
 

@@ -12,133 +12,12 @@ const fs = require('fs');
  * Generates a PDF report matching the "Foundation for Ed-Equity" Audit Report format.
  * Recreates the exact layout using clean HTML/CSS Tables instead of fragile absolute positioning.
  */
-const generateLessonPlanReportHtml = (data) => {
-    const cob = data.cob_report || {};
-    const headerData = cob.header || {};
-    const scores = cob.scores || {};
-    const params = cob.parameters || [];
-
-    let tableBody = '';
-    let totalMaxScore = 0;
-    let totalEarnedScore = 0;
-
-    const grouped = {};
-    const categoryOrder = [];
-
-    params.forEach(p => {
-        const cat = p.category || 'General';
-        if (!grouped[cat]) {
-            grouped[cat] = [];
-            categoryOrder.push(cat);
-        }
-        grouped[cat].push(p);
-    });
-
-    categoryOrder.forEach(catName => {
-        tableBody += `
-            <tr>
-                <td colspan="6" style="background-color: #d1d5db; font-weight: bold; padding: 8px;">${catName}</td>
-            </tr>
-        `;
-
-        grouped[catName].forEach((p, idx) => {
-            let wStr = String(p.weight || "1").replace(/[^0-9.]/g, '');
-            let ooi = parseFloat(wStr) || 1;
-            
-            let sStr = String(p.score).match(/^[0-9.]+/);
-            let score = sStr ? parseFloat(sStr[0]) : 0; // 0, 1, or 2
-
-            let maxScore = ooi * 2;
-            let earnedScore = score * ooi;
-
-            totalMaxScore += maxScore;
-            totalEarnedScore += earnedScore;
-
-            let yesNo = score === 2 ? 'Yes' : 'No';
-
-            tableBody += `
-                <tr>
-                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">${idx + 1}</td>
-                    <td style="border: 1px solid #000; padding: 5px;">${p.name || p.parameter}</td>
-                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">${yesNo}</td>
-                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">${ooi}</td>
-                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">${score}</td>
-                    <td style="border: 1px solid #000; padding: 5px;">${p.comment || p.auditor_note || ''}</td>
-                </tr>
-            `;
-        });
-    });
-
-    let overallPercentage = totalMaxScore > 0 ? ((totalEarnedScore / totalMaxScore) * 100).toFixed(2) : 0;
-
-    return `
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                    body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; color: #000; }
-                    .main-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 20px; }
-                    .main-table th, .main-table td { border: 1px solid #000; padding: 6px; }
-                    .main-table th { background-color: #f2f2f2; font-weight: bold; text-align: center; }
-                </style>
-            </head>
-            <body>
-                <div style="font-family: Arial, sans-serif; position: relative; margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
-                        <div style="font-size: 14px; font-weight: bold; color: #0000FF; margin-bottom: 5px;">LESSON PLAN – AUDIT REPORT</div>
-                        <div style="text-align: right; font-weight: bold; color: #555; font-size: 14px; margin-bottom: 5px; line-height: 1.2;">
-                            FOUNDATION FOR<br>
-                            <span style="font-size: 24px; color: #444; letter-spacing: 2px;">ED-EQUITY</span>
-                        </div>
-                    </div>
-                    <div style="border-bottom: 4px solid #e0e0e0; margin-bottom: 20px;"></div>
-                    
-                    <table style="width: 100%; font-size: 11px; border: none; border-collapse: collapse;">
-                        <tr>
-                            <td style="width: 15%; padding: 2px;">Teacher:</td><td style="font-weight: bold; width: 35%; padding: 2px;">${headerData.facilitator || 'N/A'}</td>
-                            <td style="width: 15%; padding: 2px;">School:</td><td style="font-weight: bold; width: 35%; padding: 2px;">${headerData.school || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 2px;">Grade:</td><td style="font-weight: bold; padding: 2px;">${headerData.grade || 'N/A'}</td>
-                            <td style="padding: 2px;">Section:</td><td style="font-weight: bold; padding: 2px;">${headerData.section || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 2px; padding-top: 10px;">Overall Score:</td><td style="font-weight: bold; font-size: 13px; padding: 2px; padding-top: 10px;">${overallPercentage}% (${totalEarnedScore}/${totalMaxScore})</td>
-                        </tr>
-                    </table>
-                </div>
-
-                <table class="main-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 5%;">Sr.No.</th>
-                            <th style="width: 35%;">Parameter</th>
-                            <th style="width: 10%;">Yes/No</th>
-                            <th style="width: 10%;">OOI</th>
-                            <th style="width: 10%;">Score (0-2)</th>
-                            <th style="width: 30%;">If No (Reason) / Comments</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${tableBody}
-                    </tbody>
-                </table>
-            </body>
-        </html>
-    `;
-};
-
 const generateReportFromHtml = async (data, templatePath, outputPath) => {
     try {
-        let finalHtml = '';
-        if (data.auditor_note && data.auditor_note.includes('Lesson Plan')) {
-            finalHtml = generateLessonPlanReportHtml(data);
-        } else {
-            const cob = data.cob_report || {};
-            const headerData = cob.header || {};
-            const scores = cob.scores || {};
-            const params = cob.parameters || [];
+        const cob = data.cob_report || {};
+        const headerData = cob.header || {};
+        const scores = cob.scores || {};
+        const params = cob.parameters || [];
 
         // 1. Calculations
         let globalTotalWeight = 0;
@@ -407,7 +286,7 @@ const generateReportFromHtml = async (data, templatePath, outputPath) => {
         `;
 
         // 6. Assemble Final HTML
-        finalHtml = `
+        const finalHtml = `
             <!DOCTYPE html>
             <html>
                 <head>
@@ -446,7 +325,6 @@ const generateReportFromHtml = async (data, templatePath, outputPath) => {
                 </body>
             </html>
         `;
-        }
 
         // 7. Generate PDF
         const puppeteerOptions = {

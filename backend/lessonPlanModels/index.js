@@ -18,7 +18,6 @@ const syncDatabase = async (retries = 3) => {
         // without affecting 'Roles' which has max key issues on alter: true
         await Rubric.sync({ alter: true });
         await Lecture.sync({ alter: true });
-        await School.sync({ alter: true });
 
         //console.log('Database & tables synced!');
     } catch (error) {

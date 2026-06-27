@@ -237,8 +237,13 @@ const LessonPlanVideoUpload = () => {
     const handleUpload = async (e) => {
         e.preventDefault();
 
-        if (!selectedSchool || !selectedTeacher || !selectedDate || !grade || !section || !lessonPlanFile) {
-            alert("Please complete all steps, including picking a Lesson Plan file.");
+        if (!selectedSchool || !selectedTeacher || !selectedDate || !selectedFTPVideo || !grade || !section) {
+            alert("Please complete all steps, including picking a Video from the folder.");
+            return;
+        }
+        
+        if (!folderVideos.includes(selectedFTPVideo)) {
+            alert("Please select a valid video from the list.");
             return;
         }
 
@@ -257,8 +262,10 @@ const LessonPlanVideoUpload = () => {
             finalForm.append('grade', grade);
             finalForm.append('section', section);
 
-            // No longer appending existingVideoFileName
-            // Removed readingMaterialFile append
+            // Append the FTP video filename instead of file
+            finalForm.append('existingVideoFileName', selectedFTPVideo);
+
+            if (readingMaterialFile) finalForm.append('readingMaterial', readingMaterialFile);
             if (lessonPlanFile) finalForm.append('lessonPlan', lessonPlanFile);
 
             setMessage('Sending processing request to Server...');
@@ -276,6 +283,7 @@ const LessonPlanVideoUpload = () => {
             if (res.data.status === 'processing' && res.data.lecture_id) {
                 // The backend received it and started background analysis
                 setIsLoading(false);
+                setSelectedFTPVideo('');
                 setCompletedLectureId(res.data.lecture_id);
                 setShowSuccessModal(true);
             } else {
@@ -283,6 +291,7 @@ const LessonPlanVideoUpload = () => {
                 if (res.data.pdfReport) {
                     setPdfUrl(res.data.pdfReport);
                 }
+                setSelectedFTPVideo('');
                 setIsLoading(false);
                 setShowSuccessModal(true);
             }
@@ -374,7 +383,7 @@ const LessonPlanVideoUpload = () => {
 
             {/* Main Content */}
             <div className="dashboard-container" style={{ padding: '2rem', filter: isLoading || showSuccessModal ? 'blur(5px)' : 'none', pointerEvents: isLoading || showSuccessModal ? 'none' : 'auto' }}>
-                <h2 className="page-title">Upload Lesson Plan</h2>
+                <h2 className="page-title">Upload Lecture Video</h2>
                 <div className="card" style={{ maxWidth: '800px', margin: '2rem auto', padding: '2rem', borderRadius: '16px', background: 'white', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
 
                     <form onSubmit={handleUpload}>
@@ -497,11 +506,24 @@ const LessonPlanVideoUpload = () => {
 
 
 
-                        <div className="form-group" style={{ marginBottom: '2rem', opacity: selectedDate ? 1 : 0.5 }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Upload Lesson Plan (.pdf, .doc, .docx)</label>
+                        <div className="form-group" style={{ marginBottom: '1.5rem', opacity: selectedDate ? 1 : 0.5 }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Reading Material / Eye to Mind (.pdf)</label>
                             <input
                                 type="file"
-                                accept=".pdf,.doc,.docx"
+                                accept=".pdf"
+                                onChange={(e) => setReadingMaterialFile(e.target.files[0])}
+                                disabled={!selectedDate}
+                                style={{ width: '100%', padding: '0.8rem', border: '1px dashed #d1d5db', borderRadius: '8px' }}
+                                required
+                            />
+                        </div>
+
+                        {/* Open Sesame (PDF) */}
+                        <div className="form-group" style={{ marginBottom: '2rem', opacity: selectedDate ? 1 : 0.5 }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Open Sesame / Lesson Plan (.pdf)</label>
+                            <input
+                                type="file"
+                                accept=".pdf"
                                 onChange={(e) => setLessonPlanFile(e.target.files[0])}
                                 disabled={!selectedDate}
                                 style={{ width: '100%', padding: '0.8rem', border: '1px dashed #d1d5db', borderRadius: '8px' }}
@@ -509,18 +531,33 @@ const LessonPlanVideoUpload = () => {
                             />
                         </div>
 
+                        {/* Step 4: Select Video from FTP */}
+                        <div className="form-group" style={{ marginBottom: '2rem', opacity: selectedDate && selectedSchool ? 1 : 0.5 }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Select Video File (From School Folder)</label>
+                            <SearchableSelect
+                                options={folderVideos}
+                                value={selectedFTPVideo}
+                                onChange={setSelectedFTPVideo}
+                                disabled={!selectedDate || !selectedSchool}
+                                placeholder="-- Choose Video from Server FTP --"
+                            />
+                            {folderVideos.length === 0 && selectedSchool && (
+                                <p style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: '0.5rem' }}>No videos found in this school's folder.</p>
+                            )}
+                        </div>
+
                         <button
                             type="submit"
-                            disabled={!lessonPlanFile}
+                            disabled={!selectedFTPVideo}
                             style={{
                                 width: '100%',
                                 padding: '1rem',
-                                background: lessonPlanFile ? '#000000' : '#9ca3af',
+                                background: selectedFTPVideo ? '#000000' : '#9ca3af',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '8px',
                                 fontWeight: 'bold',
-                                cursor: lessonPlanFile ? 'pointer' : 'not-allowed',
+                                cursor: selectedFTPVideo ? 'pointer' : 'not-allowed',
                                 fontSize: '1rem'
                             }}
                         >
