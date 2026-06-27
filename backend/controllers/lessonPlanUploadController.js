@@ -297,13 +297,8 @@ const uploadVideo = async (req, res) => {
                                     const reportFilename = `report-${lecture.id}.pdf`;
                                     const reportPath = path.join(__dirname, '../uploads', reportFilename);
 
-                                    if (fs.existsSync(htmlTemplatePath)) {
-                                        const { generateReportFromHtml } = require('../services/htmlReportService');
-                                        await generateReportFromHtml(analysisResult, htmlTemplatePath, reportPath);
-                                    } else {
-                                        const { generatePDF } = require('../services/pdfService');
-                                        await generatePDF(analysisResult, reportPath);
-                                    }
+                                    const { generateReportFromHtml } = require('../services/htmlReportService');
+                                    await generateReportFromHtml(analysisResult, null, reportPath);
                                     console.log("[Background] PDF Report Generated Successfully:", reportFilename);
                                 } catch (pdfErr) {
                                     console.error("[Background] PDF Generation Failed:", pdfErr);
