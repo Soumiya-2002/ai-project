@@ -58,7 +58,7 @@ const LessonPlanSchoolList = () => {
      */
     const loadSchools = async (startPage) => {
         try {
-            const { data } = await api.get(`/schools?page=${startPage}&limit=${limit}`);
+            const { data } = await api.get(`/lesson-plan-schools?page=${startPage}&limit=${limit}`);
             if (data.data) {
                 setSchools(data.data);
                 setTotalPages(data.totalPages);
@@ -132,7 +132,7 @@ const LessonPlanSchoolList = () => {
             if (editingSchool !== null) {
                 // Update
                 const id = schools[editingSchool].id;
-                await api.put(`/schools/${id}`, payload);
+                await api.put(`/lesson-plan-schools/${id}`, payload);
                 toast.success("School updated");
             } else {
                 // Create
@@ -175,7 +175,7 @@ const LessonPlanSchoolList = () => {
         if (window.confirm('Delete this school?')) {
             try {
                 const id = schools[index].id;
-                await api.delete(`/schools/${id}`);
+                await api.delete(`/lesson-plan-schools/${id}`);
                 toast.info("School deleted");
                 loadSchools(page);
             } catch (error) {
@@ -194,7 +194,7 @@ const LessonPlanSchoolList = () => {
         const newStatus = school.status === 'Active' ? 'Inactive' : 'Active';
 
         try {
-            await api.put(`/schools/${school.id}`, {
+            await api.put(`/lesson-plan-schools/${school.id}`, {
                 ...school,
                 status: newStatus
             });

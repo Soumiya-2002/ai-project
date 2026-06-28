@@ -6,8 +6,8 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const lessonPlanSequelize = new Sequelize(
     process.env.LESSON_PLAN_DB_NAME,
-    process.env.DB_USER,
-    process.env.DB_PASSWORD,
+    process.env.LESSON_PLAN_DB_USER,
+    process.env.LESSON_PLAN_DB_PASSWORD,
     {
         host: process.env.DB_HOST,
         dialect: 'mysql',

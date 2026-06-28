@@ -56,7 +56,7 @@ const LessonPlanUserList = () => {
     const loadUsers = async (startPage) => {
         try {
             setLoading(true);
-            const { data } = await api.get(`/users?page=${startPage}&limit=${limit}`);
+            const { data } = await api.get(`/lesson-plan-users?page=${startPage}&limit=${limit}`);
             if (data.data) {
                 setUsers(data.data);
                 setTotalPages(data.totalPages);
@@ -115,7 +115,7 @@ const LessonPlanUserList = () => {
 
         try {
             if (editingUser) {
-                await api.put(`/users/${editingUser}`, formData);
+                await api.put(`/lesson-plan-users/${editingUser}`, formData);
                 toast.success("User updated successfully");
             } else {
                 await api.post('/lesson-plan-users', formData);
@@ -153,7 +153,7 @@ const LessonPlanUserList = () => {
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this user?')) {
             try {
-                await api.delete(`/users/${id}`);
+                await api.delete(`/lesson-plan-users/${id}`);
                 toast.success("User deleted");
                 loadUsers();
             } catch (error) {

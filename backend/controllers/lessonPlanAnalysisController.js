@@ -2,7 +2,7 @@ const { Report, Lecture, User, School, Class } = require('../lessonPlanModels');
 const { processAudio } = require('../services/ai/vapiService');
 const { generateAnalysis } = require('../services/ai/geminiService');
 const { generateRubricScore } = require('../services/ai/nlmService');
-const { generateReportFromHtml } = require('../services/htmlReportService');
+const { generateLessonPlanReportFromHtml } = require('../services/lessonPlan/lessonPlanReportService');
 const path = require('path');
 const fs = require('fs');
 
@@ -103,7 +103,9 @@ const downloadReport = async (req, res) => {
 
         // Check if Metadata is missing or "N/A"
         let needsPatching = false;
-        const header = analysisData.cob_report?.header || {};
+        const reportRoot = analysisData.lesson_plan_report || analysisData.cob_report || {};
+        const header = reportRoot.header || {};
+        
         if (
             !header.school || header.school === 'N/A' || header.school === 'Unknown School' ||
             !header.facilitator || header.facilitator === 'N/A' || header.facilitator === 'Unknown Teacher' || header.facilitator === 'Name'
@@ -139,27 +141,27 @@ const downloadReport = async (req, res) => {
 
                 if (lecture) {
                     // Update Header
-                    if (!analysisData.cob_report) analysisData.cob_report = {};
-                    if (!analysisData.cob_report.header) analysisData.cob_report.header = {};
+                    if (!analysisData.lesson_plan_report) analysisData.lesson_plan_report = {};
+                    if (!analysisData.lesson_plan_report.header) analysisData.lesson_plan_report.header = {};
 
                     if (lecture.Teacher) {
-                        analysisData.cob_report.header.facilitator = lecture.Teacher.name;
+                        analysisData.lesson_plan_report.header.facilitator = lecture.Teacher.name;
                         if (lecture.Teacher.School) {
-                            analysisData.cob_report.header.school = lecture.Teacher.School.name;
+                            analysisData.lesson_plan_report.header.school = lecture.Teacher.School.name;
                         }
                     }
                     if (lecture.Class) {
                         // Inherit grade/section
-                        analysisData.cob_report.header.grade = lecture.Class.name;
-                        analysisData.cob_report.header.section = lecture.Class.section;
+                        analysisData.lesson_plan_report.header.grade = lecture.Class.name;
+                        analysisData.lesson_plan_report.header.section = lecture.Class.section;
                         // If school wasn't found on teacher
-                        if (!analysisData.cob_report.header.school && lecture.Class.School) {
-                            analysisData.cob_report.header.school = lecture.Class.School.name;
+                        if (!analysisData.lesson_plan_report.header.school && lecture.Class.School) {
+                            analysisData.lesson_plan_report.header.school = lecture.Class.School.name;
                         }
                     }
                     // Persist date
                     if (lecture.date) {
-                        analysisData.cob_report.header.date = lecture.date;
+                        analysisData.lesson_plan_report.header.date = lecture.date;
                     }
 
                     // Save back to DB to fix it permanently
@@ -177,14 +179,19 @@ const downloadReport = async (req, res) => {
 
         // Generate PDF using Puppeteer (HTML Service)
         //console.log(`Generating PDF for ID ${lecture_id}...`);
-        await generateReportFromHtml(analysisData, null, tempPath);
+        await generateLessonPlanReportFromHtml(analysisData, tempPath);
 
         // Send to user
         res.download(tempPath, `Report-${lecture_id}.pdf`, (err) => {
             if (err) {
-                console.error("File Send Error:", err);
-                if (!res.headersSent) {
-                    res.status(500).send("Error downloading file");
+                if (err.code === 'ECONNABORTED') {
+                    // Client disconnected, ignore
+                    // console.log(`[Info] Download for Report-${lecture_id}.pdf was aborted by the client.`);
+                } else {
+                    console.error("File Send Error:", err);
+                    if (!res.headersSent) {
+                        res.status(500).send("Error downloading file");
+                    }
                 }
             }
         });

@@ -14,8 +14,9 @@ const syncDatabase = async (retries = 3) => {
         // when Sequelize tries to drop non-existent constraints.
         await sequelize.sync({ alter: false });
 
-        // Force alter specifically for 'Rubric' and 'Lecture' to update schema 
+        // Force alter specifically for 'Rubric', 'Lecture', and 'User' to update schema 
         // without affecting 'Roles' which has max key issues on alter: true
+        await User.sync({ alter: true });
         await Rubric.sync({ alter: true });
         await Lecture.sync({ alter: true });
 

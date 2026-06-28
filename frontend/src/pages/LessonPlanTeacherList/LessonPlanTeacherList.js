@@ -84,7 +84,7 @@ const LessonPlanTeacherList = () => {
      */
     const loadTeachers = async (startPage) => {
         try {
-            const { data } = await api.get(`/teachers?page=${startPage}&limit=${limit}`);
+            const { data } = await api.get(`/lesson-plan-teachers?page=${startPage}&limit=${limit}`);
             if (data && Array.isArray(data.data)) {
                 setTeachers(data.data);
                 setTotalPages(data.totalPages || 0);
@@ -165,7 +165,7 @@ const LessonPlanTeacherList = () => {
 
             if (editingTeacher !== null) {
                 const id = teachers[editingTeacher].id;
-                await api.put(`/teachers/${id}`, payload);
+                await api.put(`/lesson-plan-teachers/${id}`, payload);
                 toast.success("Teacher updated");
                 loadTeachers(page);
             } else {
@@ -206,7 +206,7 @@ const LessonPlanTeacherList = () => {
         if (window.confirm('Delete this teacher?')) {
             try {
                 const id = teachers[index].id;
-                await api.delete(`/teachers/${id}`);
+                await api.delete(`/lesson-plan-teachers/${id}`);
                 toast.info("Teacher deleted");
                 loadTeachers(page);
             } catch (error) {
@@ -224,7 +224,7 @@ const LessonPlanTeacherList = () => {
         const newStatus = teacher.status === 'Active' ? 'Blocked' : 'Active';
 
         try {
-            await api.put(`/teachers/${teacher.id}`, {
+            await api.put(`/lesson-plan-teachers/${teacher.id}`, {
                 status: newStatus
             });
             toast.success(`Teacher ${newStatus === 'Active' ? 'Activated' : 'Blocked'}`);

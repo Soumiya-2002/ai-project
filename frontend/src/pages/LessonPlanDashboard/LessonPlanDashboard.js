@@ -9,12 +9,13 @@ import './LessonPlanDashboard.css';
  * It fetches the current session and real statistics from localStorage/API logic.
  */
 const LessonPlanDashboard = () => {
+    const api = require('../../api/axios').default;
     const [session, setSession] = useState({ role: 'school_admin', user: { name: 'User' } });
     const [realStats, setRealStats] = useState({ teachers: 0, videos: 0 });
 
     useEffect(() => {
         // Load session info
-        const sessionStr = localStorage.getItem('session');
+        const sessionStr = localStorage.getItem('user') || localStorage.getItem('session');
         if (sessionStr) {
             const loadedSession = JSON.parse(sessionStr);
             setSession(prev => ({
@@ -24,12 +25,22 @@ const LessonPlanDashboard = () => {
             }));
         }
 
-        // Load real counts from localStorage
-        const teachers = JSON.parse(localStorage.getItem('teachers')) || [];
-        // Mock videos if not strictly in LS yet, or try to load
-        // const videos = JSON.parse(localStorage.getItem('videos')) || []; 
-        // For now, let's just use teachers count as it's reliable from TeacherList
-        setRealStats({ teachers: teachers.length, videos: 12 }); // Keep videos mock or 0
+        // Fetch real stats from the Lesson Plan Dashboard endpoint
+        const fetchDashboardStats = async () => {
+            try {
+                const { data } = await api.get('/lesson-plan-dashboard/stats');
+                setRealStats({ 
+                    schools: data.schools || 0,
+                    teachers: data.teachers || 0,
+                    users: data.users || 0,
+                    videos: data.lectures || 0 
+                });
+            } catch (error) {
+                console.error("Failed to load dashboard stats", error);
+            }
+        };
+
+        fetchDashboardStats();
     }, []);
 
     // Generate role-specific content
@@ -40,17 +51,17 @@ const LessonPlanDashboard = () => {
     const getStats = () => {
         if (session.role === 'teacher') {
             return [
-                { title: 'My Videos', value: '12', icon: 'fa-solid fa-file-video', color: 'blue' },
+                { title: 'My Lesson Plans', value: '12', icon: 'fa-solid fa-file-contract', color: 'blue' },
                 { title: 'Avg Engagement', value: '85%', icon: 'fa-solid fa-chart-line', color: 'green' },
                 { title: 'Processing', value: '2', icon: 'fa-solid fa-spinner', color: 'orange' },
                 { title: 'Pending Review', value: '3', icon: 'fa-solid fa-clipboard-check', color: 'purple' }
             ];
         }
         return [
-            { title: 'Total Schools', value: '1', icon: 'fa-solid fa-school', color: 'blue' },
-            { title: 'Active Teachers', value: realStats.teachers || '0', icon: 'fa-solid fa-chalkboard-user', color: 'green' },
-            { title: 'Videos Analyzed', value: '54', icon: 'fa-solid fa-play', color: 'orange' },
-            { title: 'Alerts', value: '5', icon: 'fa-solid fa-triangle-exclamation', color: 'red' }
+            { title: 'Total Schools', value: realStats.schools !== undefined ? realStats.schools : '0', icon: 'fa-solid fa-school', color: 'blue' },
+            { title: 'Active Teachers', value: realStats.teachers !== undefined ? realStats.teachers : '0', icon: 'fa-solid fa-chalkboard-user', color: 'green' },
+            { title: 'Total Users', value: realStats.users !== undefined ? realStats.users : '0', icon: 'fa-solid fa-users', color: 'purple' },
+            { title: 'Lesson Plans Analyzed', value: realStats.videos !== undefined ? realStats.videos : '0', icon: 'fa-solid fa-file-contract', color: 'orange' }
         ];
     };
 

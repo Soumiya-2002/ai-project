@@ -101,9 +101,6 @@ const LessonPlanVideoUpload = () => {
     const navigate = useNavigate();
     const [schools, setSchools] = useState([]);
     const [teachers, setTeachers] = useState([]);
-    const [file, setFile] = useState(null); // Keep for legacy or if needed
-    const [folderVideos, setFolderVideos] = useState([]);
-    const [selectedFTPVideo, setSelectedFTPVideo] = useState('');
     const [message, setMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -126,7 +123,6 @@ const LessonPlanVideoUpload = () => {
     const [section, setSection] = useState('');
 
 
-    const [readingMaterialFile, setReadingMaterialFile] = useState(null);
     const [lessonPlanFile, setLessonPlanFile] = useState(null);
 
     // User Role context
@@ -140,7 +136,6 @@ const LessonPlanVideoUpload = () => {
         } else if (userSchoolId) {
             setSelectedSchool(userSchoolId);
             loadTeachers(userSchoolId);
-            loadSchoolVideos(userSchoolId);
             checkSchoolRubrics(userSchoolId);
         }
     }, [isSuperAdmin, userSchoolId]);
@@ -154,20 +149,12 @@ const LessonPlanVideoUpload = () => {
         }
     };
 
-    const loadSchoolVideos = async (schoolId) => {
-        try {
-            const { data } = await api.get(`/schools/${schoolId}/videos`);
-            setFolderVideos(data.videos || []);
-        } catch (err) {
-            console.error("Failed to load school videos", err);
-            setFolderVideos([]);
-        }
-    };
+
 
     const checkSchoolRubrics = async (schoolId) => {
         try {
             setCheckingRubrics(true);
-            const { data } = await api.get(`/rubrics?school_id=${schoolId}`);
+            const { data } = await api.get(`/lesson-plan-rubrics?school_id=${schoolId}`);
             if (data && data.data && data.data.length === 0) {
                 setSchoolHasRubrics(false);
             } else {
@@ -187,8 +174,8 @@ const LessonPlanVideoUpload = () => {
      */
     const loadTeachers = async (schoolId) => {
         try {
-            // Changed from /teachers to /users/teachers to fetch from Users table
-            const { data } = await api.get(`/users/teachers?school_id=${schoolId}&limit=100`);
+            // Fetch from lesson plan users routes instead of main users route
+            const { data } = await api.get(`/lesson-plan-users/teachers?school_id=${schoolId}&limit=100`);
             setTeachers(data.data || []);
         } catch (err) {
             console.error("Failed to load teachers", err);
@@ -203,24 +190,16 @@ const LessonPlanVideoUpload = () => {
         const schoolId = e.target.value;
         setSelectedSchool(schoolId);
         setSelectedTeacher('');
-        setSelectedFTPVideo('');
         setSchoolHasRubrics(true);
         if (schoolId) {
             loadTeachers(schoolId);
-            loadSchoolVideos(schoolId);
             checkSchoolRubrics(schoolId);
         } else {
             setTeachers([]);
-            setFolderVideos([]);
         }
     };
 
-    /**
-     * Captures the primary learning material (video/audio recording) from the file picker.
-     */
-    const handleFileChange = (e) => {
-        setFile(e.target.files[0]);
-    };
+
 
     // State for Polling
     const [pollingLectureId, setPollingLectureId] = useState(null);
@@ -237,20 +216,15 @@ const LessonPlanVideoUpload = () => {
     const handleUpload = async (e) => {
         e.preventDefault();
 
-        if (!selectedSchool || !selectedTeacher || !selectedDate || !selectedFTPVideo || !grade || !section) {
-            alert("Please complete all steps, including picking a Video from the folder.");
-            return;
-        }
-        
-        if (!folderVideos.includes(selectedFTPVideo)) {
-            alert("Please select a valid video from the list.");
+        if (!selectedSchool || !selectedTeacher || !selectedDate || !grade || !section || !lessonPlanFile) {
+            alert("Please complete all steps, including uploading the Lesson Plan PDF.");
             return;
         }
 
         try {
             setIsLoading(true);
             setUploadProgress(0);
-            setMessage('Uploading Video in Chunks... Analysis will start automatically.');
+            setMessage('Uploading Lesson Plan... Analysis will start automatically.');
             setPdfUrl(null);
 
             // Finalize upload parameters
@@ -262,11 +236,7 @@ const LessonPlanVideoUpload = () => {
             finalForm.append('grade', grade);
             finalForm.append('section', section);
 
-            // Append the FTP video filename instead of file
-            finalForm.append('existingVideoFileName', selectedFTPVideo);
-
-            if (readingMaterialFile) finalForm.append('readingMaterial', readingMaterialFile);
-            if (lessonPlanFile) finalForm.append('lessonPlan', lessonPlanFile);
+            finalForm.append('lessonPlan', lessonPlanFile);
 
             setMessage('Sending processing request to Server...');
 
@@ -283,7 +253,6 @@ const LessonPlanVideoUpload = () => {
             if (res.data.status === 'processing' && res.data.lecture_id) {
                 // The backend received it and started background analysis
                 setIsLoading(false);
-                setSelectedFTPVideo('');
                 setCompletedLectureId(res.data.lecture_id);
                 setShowSuccessModal(true);
             } else {
@@ -291,7 +260,6 @@ const LessonPlanVideoUpload = () => {
                 if (res.data.pdfReport) {
                     setPdfUrl(res.data.pdfReport);
                 }
-                setSelectedFTPVideo('');
                 setIsLoading(false);
                 setShowSuccessModal(true);
             }
@@ -321,7 +289,7 @@ const LessonPlanVideoUpload = () => {
                 <div className="full-screen-loader">
                     <div className="loader-content">
                         <span className="loader-spinner"></span>
-                        <h3 className="loader-title">Uploading Video...</h3>
+                        <h3 className="loader-title">Uploading Lesson Plan...</h3>
                         <div style={{ width: '100%', marginTop: '1rem', marginBottom: '1rem' }}>
                             <div style={{ background: '#e5e7eb', borderRadius: '8px', overflow: 'hidden', height: '12px' }}>
                                 <div style={{ width: `${uploadProgress}%`, background: '#2563eb', height: '100%', transition: 'width 0.3s' }}></div>
@@ -343,7 +311,7 @@ const LessonPlanVideoUpload = () => {
                         <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
                         <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#111', marginBottom: '1rem' }}>Successfully Submitted!</h2>
                         <p style={{ color: '#4b5563', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-                            Your video processing request has been successfully submitted.
+                            Your lesson plan analysis request has been successfully submitted.
                         </p>
                         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                             {/* <button
@@ -383,7 +351,7 @@ const LessonPlanVideoUpload = () => {
 
             {/* Main Content */}
             <div className="dashboard-container" style={{ padding: '2rem', filter: isLoading || showSuccessModal ? 'blur(5px)' : 'none', pointerEvents: isLoading || showSuccessModal ? 'none' : 'auto' }}>
-                <h2 className="page-title">Upload Lecture Video</h2>
+                <h2 className="page-title">Upload Lesson Plan</h2>
                 <div className="card" style={{ maxWidth: '800px', margin: '2rem auto', padding: '2rem', borderRadius: '16px', background: 'white', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
 
                     <form onSubmit={handleUpload}>
@@ -506,24 +474,12 @@ const LessonPlanVideoUpload = () => {
 
 
 
-                        <div className="form-group" style={{ marginBottom: '1.5rem', opacity: selectedDate ? 1 : 0.5 }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Reading Material / Eye to Mind (.pdf)</label>
-                            <input
-                                type="file"
-                                accept=".pdf"
-                                onChange={(e) => setReadingMaterialFile(e.target.files[0])}
-                                disabled={!selectedDate}
-                                style={{ width: '100%', padding: '0.8rem', border: '1px dashed #d1d5db', borderRadius: '8px' }}
-                                required
-                            />
-                        </div>
-
                         {/* Open Sesame (PDF) */}
                         <div className="form-group" style={{ marginBottom: '2rem', opacity: selectedDate ? 1 : 0.5 }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Open Sesame / Lesson Plan (.pdf)</label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Lesson Plan (.pdf)</label>
                             <input
                                 type="file"
-                                accept=".pdf"
+                                accept=".pdf,.doc,.docx"
                                 onChange={(e) => setLessonPlanFile(e.target.files[0])}
                                 disabled={!selectedDate}
                                 style={{ width: '100%', padding: '0.8rem', border: '1px dashed #d1d5db', borderRadius: '8px' }}
@@ -531,33 +487,18 @@ const LessonPlanVideoUpload = () => {
                             />
                         </div>
 
-                        {/* Step 4: Select Video from FTP */}
-                        <div className="form-group" style={{ marginBottom: '2rem', opacity: selectedDate && selectedSchool ? 1 : 0.5 }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Select Video File (From School Folder)</label>
-                            <SearchableSelect
-                                options={folderVideos}
-                                value={selectedFTPVideo}
-                                onChange={setSelectedFTPVideo}
-                                disabled={!selectedDate || !selectedSchool}
-                                placeholder="-- Choose Video from Server FTP --"
-                            />
-                            {folderVideos.length === 0 && selectedSchool && (
-                                <p style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: '0.5rem' }}>No videos found in this school's folder.</p>
-                            )}
-                        </div>
-
                         <button
                             type="submit"
-                            disabled={!selectedFTPVideo}
+                            disabled={false}
                             style={{
                                 width: '100%',
                                 padding: '1rem',
-                                background: selectedFTPVideo ? '#000000' : '#9ca3af',
+                                background: '#000000',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '8px',
                                 fontWeight: 'bold',
-                                cursor: selectedFTPVideo ? 'pointer' : 'not-allowed',
+                                cursor: 'pointer',
                                 fontSize: '1rem'
                             }}
                         >
