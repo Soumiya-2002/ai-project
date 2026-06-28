@@ -87,6 +87,7 @@ class LessonPlanAiService {
             **Instructions**:
             1. **Adhere Strictly to the User Provided Prompt**: The rubric above defines the exact parameters, scoring rules, OOI (weightage), and "If No" consequences.
                - **CRITICAL: You MUST extract and output an evaluation for EVERY single parameter listed in the rubric. Do NOT skip any parameter.**
+               - **CRITICAL: Evaluation MUST be based strictly on the 'Lesson Plan Content' provided above. The 'METADATA CONTEXT' is strictly for the output header and MUST NOT be used to satisfy rubric parameters. If a parameter (like Grade, Subject, Topic, etc.) is missing from the Lesson Plan Content itself, you MUST score it as missing (No/0 or 1), even if it exists in the Metadata Context.**
             2. **Scoring Logic**:
                - Read the Lesson Plan and evaluate it against each parameter constructively and fairly.
                - Set **"yes_no"** to "Yes" or "No".
@@ -94,7 +95,7 @@ class LessonPlanAiService {
                  - **2** = Addressed (Yes). Default to this if the teacher has made a reasonable attempt. Assume positive intent.
                  - **1** = Needs rework (No). Use this if the requirement is partially attempted but missing key details.
                  - **0** = Rejected (No). Use this only if the requirement is completely missing.
-               - **Note**: Be extremely lenient and constructive. Give the teacher the benefit of the doubt. If they have provided the necessary information in any format, score it as a 2 (Yes). Do not penalize for minor formatting issues.
+               - **Note**: Give the teacher the benefit of the doubt for minor formatting issues, but do NOT award points for required information that is entirely absent from the text of the lesson plan.
                - Extract the exact **OOI** value (number) for that parameter from the rubric. If missing, assume 1.
                - Extract the EXACT "If No" consequence from the rubric for that parameter (e.g., "REWORK REQUIRED", "RESUBMISSION REQUIRED").
                - Provide a brief "remark" explaining the evidence.

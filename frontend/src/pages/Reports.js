@@ -23,6 +23,13 @@ const Reports = () => {
 
     React.useEffect(() => {
         fetchLectures();
+        
+        // Auto-refresh only the status every 10 seconds (10000 ms)
+        const intervalId = setInterval(() => {
+            pollLectures();
+        }, 10000);
+
+        return () => clearInterval(intervalId);
     }, []);
 
     // Cleanup object URL on unmount or change
@@ -33,6 +40,30 @@ const Reports = () => {
             }
         };
     }, [pdfBlobUrl]);
+
+    const pollLectures = async () => {
+        try {
+            const res = await api.get('/lectures');
+            const sorted = [...res.data].sort((a, b) => parseInt(b.id) - parseInt(a.id));
+            setLectures(sorted);
+            
+            // Update selected lecture if its status has changed
+            setSelectedLecture(prevSelected => {
+                if (!prevSelected) return prevSelected;
+                const updatedLecture = sorted.find(l => l.id === prevSelected.id);
+                if (updatedLecture && updatedLecture.status !== prevSelected.status) {
+                    // If it just completed, we can fetch the PDF automatically
+                    if (updatedLecture.status === 'completed' && prevSelected.status !== 'completed') {
+                        fetchPdf(updatedLecture.id);
+                    }
+                    return updatedLecture;
+                }
+                return prevSelected;
+            });
+        } catch (err) {
+            console.error("Failed to poll lectures", err);
+        }
+    };
 
     const fetchLectures = async () => {
         try {
